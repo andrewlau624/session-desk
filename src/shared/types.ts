@@ -236,6 +236,24 @@ export type WorktreeVerdict = 'safe' | 'active' | 'blocked' | 'missing'
  */
 export type BranchVerdict = 'safe' | 'active' | 'blocked' | 'protected'
 
+/**
+ * A branch of one of your merged PRs that's still on GitHub. eligible: it
+ * can go without losing anything (it still points at the PR's final commit,
+ * no open PR builds on it, it isn't the default or protected); otherwise
+ * `reason` says why not. GitHub's Restore branch button on the PR brings it back.
+ */
+export interface RemoteLeftover {
+  repo: string
+  slug: string
+  branch: string
+  sha: string
+  pr: { number: number; url: string; mergedAt: string }
+  /** You still have it on this Mac too. */
+  local: boolean
+  eligible: boolean
+  reason: string
+}
+
 export interface BranchInfo {
   /** Repo folder name, as in the Worktrees view. */
   repo: string
@@ -527,6 +545,10 @@ export interface DeskApi {
   listBranches(): Promise<BranchInfo[]>
   /** Deletes a listed local branch after re-checking it; resolves with its last commit, for restoring. */
   removeBranch(repoPath: string, branch: string): Promise<string>
+  /** Branches of your merged PRs still on GitHub, per repo in the project, each with whether deleting it loses nothing. */
+  listRemoteLeftovers(): Promise<RemoteLeftover[]>
+  /** Deletes a listed branch on GitHub after re-checking it; resolves with the commit it pointed at. */
+  deleteRemoteBranch(slug: string, branch: string): Promise<string>
   /** Code editors installed in /Applications that can open a folder. */
   folderApps(): Promise<string[]>
   /** Sends a kickoff turn to a session open here and idle at its prompt; false if it isn't open. */

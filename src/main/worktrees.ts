@@ -22,7 +22,7 @@ interface RunResult {
   err: string
 }
 
-async function run(cmd: string, args: string[], cwd?: string): Promise<RunResult> {
+export async function run(cmd: string, args: string[], cwd?: string): Promise<RunResult> {
   const env = { ...process.env, PATH: await loginPath(), GIT_TERMINAL_PROMPT: '0', GIT_OPTIONAL_LOCKS: '0' }
   return new Promise((resolve) =>
     execFile(cmd, args, { cwd, env, timeout: 60_000, maxBuffer: 32 << 20 }, (err, stdout, stderr) =>

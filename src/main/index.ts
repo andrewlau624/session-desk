@@ -28,6 +28,7 @@ import { listArtifacts } from './artifacts'
 import { KICKOFFS, kickoffPrompt, ticketBrief, validPrBranch } from './ticketBrief'
 import { listWorktreesCached, pruneWorktrees, removeWorktree, ticketBranches } from './worktrees'
 import { listBranches, removeBranch } from './branches'
+import { deleteRemoteBranch, listRemoteLeftovers } from './remoteBranches'
 
 // One state folder for dev and the installed app (whose name differs), so
 // groups, pins and links carry over. Set before the single-instance lock,
@@ -383,6 +384,11 @@ ipcMain.handle('branches:list', async () => {
   }))
 })
 ipcMain.handle('branches:remove', (_e, repoPath: string, branch: string) => removeBranch(String(repoPath), String(branch)))
+ipcMain.handle('branches:remoteLeftovers', () => {
+  const ws = workspace()
+  return ws ? listRemoteLeftovers(ws) : []
+})
+ipcMain.handle('branches:deleteRemote', (_e, slug: string, branch: string) => deleteRemoteBranch(String(slug), String(branch)))
 
 /**
  * Remembers the connected workspace (links, offline use) and detects tickets

@@ -256,6 +256,8 @@ The Branches view lists every local branch of every repo in the project, with it
 
 Removing a worktree can also delete its branch (a checkbox in the confirmation, off by default), only when the branch's PR is merged or closed and it still points where the worktree was.
 
+**Left on GitHub.** GitHub's "automatically delete head branches" doesn't always fire, so the second tab lists the branches of your merged PRs that are still on GitHub (most of them can go; your local copy may be long gone). A branch can be deleted there only when all of these hold: its PR is merged and was opened by you (closed-unmerged work, forks and other people's branches are never listed), it still points at the PR's final commit (nothing was pushed after the merge), no open PR uses it as its base or comes from it, and it isn't the default or a protected branch. **Delete N from GitHub…** asks first, re-checks each on GitHub right before deleting, and reports any GitHub refuses. When deleting local branches, a checkbox (off by default) also deletes their GitHub branches under the same rules. **Restore branch** on a PR brings one back.
+
 ## Concurrency
 
 Each session is its own `claude` process. Switching sessions hides a terminal; it never restarts it. A session already open in another process (the CLI or the desktop app, per `~/.claude/sessions/`) is not resumed automatically, because two processes writing one transcript corrupt it.
