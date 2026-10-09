@@ -420,6 +420,10 @@ a:hover {
   background: var(--term-bg);
 }
 
+.footer-spacer {
+  flex: 1;
+}
+
 .usage-button {
   display: flex;
   align-items: center;

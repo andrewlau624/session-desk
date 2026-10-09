@@ -1,5 +1,5 @@
 import * as pty from 'node-pty'
-import type { PtyStartRequest } from '../shared/types'
+import type { PermissionMode, PtyStartRequest } from '../shared/types'
 import { claudeDirOverride } from './paths'
 import { PLAN_KICKOFFS } from './ticketBrief'
 import { statusLineLaunch } from './usage'
@@ -30,6 +30,35 @@ const SCROLLBACK_CHARS = 512 * 1024
 interface Term {
   proc: pty.IPty
   buffer: string
+  /** The permission mode its footer shows last. */
+  mode: PermissionMode | null
+}
+
+// Claude Code's footer names the mode ("⏵⏵ auto mode on", "⏸ plan mode on",
+// …). It redraws only the cells that change, so the raw output loses letters
+// ("m nual mode on", "ccept e its on"): the patterns allow for that. Measured
+// on 2.1.295.
+const MODE_PATTERNS: [PermissionMode, RegExp][] = [
+  ['manual', /m.?n.?al mo.{0,3}on/],
+  ['acceptEdits', /cc.?pt e.{0,3}its on/],
+  ['plan', /pl.?n mo.{0,3}on/],
+  ['auto', /a.?to mo.{0,3}on/],
+  ['bypassPermissions', /bypass.{0,4}permissions on/],
+  ['dontAsk', /don.?t ask/]
+]
+/** The order Shift+Tab steps through (bypass and don't-ask only when the session was started in them). */
+export const MODE_CYCLE: PermissionMode[] = ['auto', 'manual', 'acceptEdits', 'plan']
+
+/** The mode the most recent footer text names, from raw terminal output; null if none. */
+export function detectMode(raw: string): PermissionMode | null {
+  const text = raw.replace(/\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07]*\x07|\x1b[()][A-Z0-9]/g, ' ').replace(/\s+/g, ' ')
+  let best: { mode: PermissionMode; at: number } | null = null
+  for (const [mode, re] of MODE_PATTERNS) {
+    const all = [...text.matchAll(new RegExp(re.source, 'g'))]
+    const last = all[all.length - 1]
+    if (last && (!best || last.index! > best.at)) best = { mode, at: last.index! }
+  }
+  return best?.mode ?? null
 }
 
 /** A session display name safe to pass to `claude --name`. */
@@ -60,8 +89,32 @@ export class PtyManager {
 
   constructor(
     private onData: (sessionId: string, data: string) => void,
-    private onExit: (sessionId: string, code: number) => void
+    /** `declinedBypass`: started in Bypass but exited before reaching it (its warning was declined). */
+    private onExit: (sessionId: string, code: number, declinedBypass: boolean) => void,
+    private onMode: (sessionId: string, mode: PermissionMode) => void = () => {}
   ) {}
+
+  mode(sessionId: string): PermissionMode | null {
+    return this.terms.get(sessionId)?.mode ?? null
+  }
+
+  /**
+   * Switches the mode live, as Shift+Tab does in the terminal: presses it and
+   * reads the footer until it names the wanted mode, at most once round the
+   * cycle. Resolves with the mode reached.
+   */
+  async setMode(sessionId: string, want: PermissionMode): Promise<PermissionMode | null> {
+    const t = this.terms.get(sessionId)
+    if (!t) return null
+    for (let i = 0; i < MODE_CYCLE.length + 2 && t.mode !== want; i++) {
+      t.proc.write('\x1b[Z')
+      const before = t.mode
+      // Wait for the footer to redraw with the next mode.
+      for (let w = 0; w < 20 && t.mode === before; w++) await new Promise((r) => setTimeout(r, 50))
+      if (!this.terms.has(sessionId)) return null
+    }
+    return t.mode
+  }
 
   /** PIDs of the claude processes we own, so the scanner doesn't flag them as "open elsewhere". */
   pids(): Set<number> {
@@ -90,19 +143,31 @@ export class PtyManager {
     // The session's own model and effort: flags apply to this process only, unlike /model.
     if (req.launch?.model) args.push('--model', req.launch.model)
     if (req.launch?.effort) args.push('--effort', req.launch.effort)
+    // Bypass can't be reached with Shift+Tab: it's chosen at launch (unless a plan kickoff sets plan mode).
+    if (req.launch?.permissionMode === 'bypassPermissions' && !(prompt && req.kickoff && PLAN_KICKOFFS.has(req.kickoff))) {
+      args.push('--permission-mode', 'bypassPermissions')
+    }
     if (prompt && req.kickoff && PLAN_KICKOFFS.has(req.kickoff)) args.push('--permission-mode', 'plan')
     if (prompt) args.push('--', prompt)
     const proc = spawnClaude(args, req.cwd, req.cols, req.rows)
-    const term: Term = { proc, buffer: '' }
+    const term: Term = { proc, buffer: '', mode: null }
     this.terms.set(req.sessionId, term)
 
     proc.onData((data) => {
       term.buffer = (term.buffer + data).slice(-SCROLLBACK_CHARS)
       this.onData(req.sessionId, data)
+      // Every chunk: the footer's words arrive split by cursor moves, so a
+      // cheap pre-check would miss them; a few thousand characters is cheap.
+      const mode = detectMode(term.buffer.slice(-3000))
+      if (mode && mode !== term.mode) {
+        term.mode = mode
+        this.onMode(req.sessionId, mode)
+      }
     })
     proc.onExit(({ exitCode }) => {
       this.terms.delete(req.sessionId)
-      this.onExit(req.sessionId, exitCode)
+      const declinedBypass = args.includes('bypassPermissions') && term.mode !== 'bypassPermissions'
+      this.onExit(req.sessionId, exitCode, declinedBypass)
     })
     return ''
   }

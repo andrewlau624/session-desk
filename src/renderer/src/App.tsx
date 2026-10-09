@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { BoardCard, Kickoff, LinearIssue, LinearStatus, PrBranch, SessionGroup, SessionLaunch, SessionSummary, TicketBranch } from '../../shared/types'
+import type { BoardCard, Kickoff, LinearIssue, LinearStatus, PermissionMode, PrBranch, SessionGroup, SessionLaunch, SessionSummary, TicketBranch } from '../../shared/types'
 import { Board } from './components/Board'
 import { LinearSettings } from './components/LinearSettings'
 import { SessionHeader } from './components/SessionHeader'
@@ -15,6 +15,7 @@ import { errorMessage, folderName, setLinearWorkspaceKey } from './format'
 import { FolderChip } from './components/FolderChip'
 import { ModelPicker } from './components/ModelPicker'
 import { UsageButton } from './components/UsageButton'
+import { ModeButton, modeLabel } from './components/ModeButton'
 import { busyReason, readiness, startWork, startWorkNotice } from './startWork'
 
 interface OpenTerm {
@@ -329,11 +330,47 @@ export function App() {
   // no summary yet, so its choice is kept here (it also shows before the scan catches up).
   const [launchChoice, setLaunchChoice] = useState<Record<string, SessionLaunch>>({})
 
+  // Each open session's permission mode, as its terminal shows it.
+  const [modes, setModes] = useState<Record<string, PermissionMode>>({})
+  useEffect(() => window.desk.onPtyMode((id, mode) => setModes((m) => ({ ...m, [id]: mode }))), [])
+  useEffect(() => {
+    if (!activeTermId) return
+    void window.desk.ptyMode(activeTermId).then((mode) => mode && setModes((m) => ({ ...m, [activeTermId]: mode })))
+  }, [activeTermId])
+
+  /**
+   * Switches the session's mode, for this session only. The four that Shift+Tab
+   * cycles switch live; Bypass restarts it in that mode, and leaving Bypass
+   * restarts it without, then switches.
+   */
+  const chooseMode = async (id: string, mode: PermissionMode) => {
+    try {
+      if (mode === 'bypassPermissions') {
+        await chooseLaunch(id, { permissionMode: 'bypassPermissions' })
+        return
+      }
+      if (modes[id] === 'bypassPermissions') {
+        await chooseLaunch(id, { permissionMode: null })
+        // The restarted session draws its footer, then it can switch.
+        for (let i = 0; i < 40 && !(await window.desk.ptyMode(id)); i++) await new Promise((r) => setTimeout(r, 250))
+      }
+      const reached = await window.desk.ptySetMode(id, mode)
+      if (reached !== mode) notify(`Couldn't switch to ${modeLabel(mode)}; the terminal shows ${modeLabel(reached)}`, 'error')
+    } catch (e) {
+      notify(errorMessage(e), 'error')
+    }
+  }
+
   /** For this session only: saved, then its Claude is restarted with --model/--effort. */
-  const chooseLaunch = async (id: string, choice: { model?: string; effort?: string }) => {
+  const chooseLaunch = async (id: string, choice: { model?: string; effort?: string; permissionMode?: 'bypassPermissions' | null }) => {
     try {
       await window.desk.setSessionLaunch(id, choice)
-      setLaunchChoice((c) => ({ ...c, [id]: { ...c[id], ...choice, at: Date.now() } }))
+      // The local copy only drives the model/effort display; null clears bypass.
+      const { permissionMode, ...rest } = choice
+      setLaunchChoice((c) => ({
+        ...c,
+        [id]: { ...c[id], ...rest, permissionMode: permissionMode ?? undefined, at: Date.now() }
+      }))
       // Wait for the old process to exit, so the new one never overlaps it.
       if (runningIds.has(id)) await window.desk.ptyStop(id)
       const resume = scanned.some((s) => s.id === id)
@@ -494,6 +531,20 @@ export function App() {
         </div>
         {activeTermId && (nav.kind === 'session' ? !!selected : !!defaultCwd) && (
           <div className="session-footer">
+            <ModeButton
+              mode={modes[activeTermId] ?? null}
+              blocked={
+                !runningIds.has(activeTermId)
+                  ? 'Starts when the session is open'
+                  : nav.kind === 'session' && selected && readiness(selected, runningIds) === 'needs-you'
+                    ? (busyReason('needs-you') as string)
+                    : nav.kind === 'session' && selected?.liveElsewhere
+                      ? (busyReason('elsewhere') as string)
+                      : null
+              }
+              onChoose={(mode) => chooseMode(activeTermId, mode)}
+            />
+            <span className="footer-spacer" />
             <ModelPicker
               session={nav.kind === 'session' ? (selected ?? null) : null}
               launch={(nav.kind === 'session' ? selected?.launch : null) ?? launchChoice[activeTermId] ?? null}

@@ -6,13 +6,13 @@ import { CONFIG_NAME, loadProjectConfig, projectConfig, projectConfigStatus, sta
 import { defaultModel, withDefaultContext } from './modelChoice'
 import { readModelCatalog } from './modelCatalog'
 import { installStatusLine, readUsage } from './usage'
-import type { Column, Kickoff, LinearStatus, PtyStartRequest, RenameResult, SessionSummary, Settings, TicketBranch } from '../shared/types'
+import type { Column, Kickoff, LinearStatus, PermissionMode, PtyStartRequest, RenameResult, SessionSummary, Settings, TicketBranch } from '../shared/types'
 import { COLUMNS, EFFORT_CHOICES } from '../shared/types'
 import { refreshPrInfo, requestGreptileReview, withInfo } from './github'
 import { Indicators } from './indicators'
 import { fetchBoard, fetchIssue, invalidate, linearStatus, moveIssue, refreshPrTickets, resetLinear } from './linear'
 import { applyLinks, buildBoard } from './link'
-import { cleanName, PtyManager } from './pty'
+import { cleanName, MODE_CYCLE, PtyManager } from './pty'
 import { hookApply, hookPreview, hookStatus } from './hookInstaller'
 import { installMenu, setProjectActions } from './menu'
 import { claudeDir, defaultClaudeDir, describeClaudeDir, loadShellClaudeDir, workspace } from './paths'
@@ -52,7 +52,12 @@ let activeSessionId: string | null = null
 
 const ptys = new PtyManager(
   (id, data) => win?.webContents.send('pty:data', id, data),
-  (id, code) => win?.webContents.send('pty:exit', id, code)
+  (id, code, declinedBypass) => {
+    win?.webContents.send('pty:exit', id, code)
+    // "No, exit" on Claude's Bypass warning: forget the choice, or every restart would ask again.
+    if (declinedBypass) void store.setSessionLaunch(id, { permissionMode: undefined }).then(notifySessions)
+  },
+  (id, mode) => win?.webContents.send('pty:mode', id, mode)
 )
 
 function createWindow(): void {
@@ -619,6 +624,12 @@ ipcMain.handle('session:setLaunch', async (_e, id: string, choice: { model?: unk
     if (!models.some((m) => m.id === choice.model)) throw new Error(`unknown model ${String(choice.model)}`)
     next.model = choice.model as string
   }
+  if ((choice as { permissionMode?: unknown })?.permissionMode !== undefined) {
+    const m = (choice as { permissionMode?: unknown }).permissionMode
+    // Only bypass is chosen at launch; null clears it (back to the cycle).
+    if (m !== 'bypassPermissions' && m !== null) throw new Error(`unknown launch mode ${String(m)}`)
+    ;(next as { permissionMode?: 'bypassPermissions' }).permissionMode = m === null ? undefined : 'bypassPermissions'
+  }
   if (choice?.effort !== undefined) {
     const levels = new Set([...EFFORT_CHOICES.map((e) => e.level as string), ...models.flatMap((m) => (m.efforts ?? []).map((e) => e.id))])
     if (typeof choice.effort !== 'string' || !levels.has(choice.effort) || !/^[a-z]+$/.test(choice.effort)) {
@@ -642,6 +653,12 @@ ipcMain.handle('usage:get', async (_e, id: string) => {
   if (!UUID_RE.test(String(id))) throw new Error('not a session id')
   const s = (await sessions()).find((x) => x.id === id)
   return readUsage(id, s?.contextTokens ?? null)
+})
+ipcMain.handle('pty:getMode', (_e, id: string) => ptys.mode(String(id)))
+/** Shift+Tab until the mode shows, as in the terminal: session only, no settings change. Bypass needs a relaunch. */
+ipcMain.handle('pty:setMode', (_e, id: string, mode: string) => {
+  if (!MODE_CYCLE.includes(mode as PermissionMode)) throw new Error(`${mode} can't be switched to live`)
+  return ptys.setMode(String(id), mode as PermissionMode)
 })
 /** Types /compact or /usage at an idle prompt (neither changes any setting, unlike /model). */
 ipcMain.handle('pty:command', async (_e, id: string, command: string) => {

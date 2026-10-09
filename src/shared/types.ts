@@ -121,10 +121,15 @@ export interface SessionSummary {
 export interface SessionLaunch {
   /** A model ID from MODEL_CHOICES, e.g. claude-opus-5-5 (the 1M context is added at launch when your default uses it). */
   model?: string
+  /** Only bypassPermissions is chosen at launch; the other modes switch live with Shift+Tab. */
+  permissionMode?: 'bypassPermissions'
   effort?: string
   /** When it was chosen (ms): replies after this reflect it. */
   at: number
 }
+
+/** Claude Code's permission modes (`--permission-mode`); the first four cycle with Shift+Tab. */
+export type PermissionMode = 'auto' | 'manual' | 'acceptEdits' | 'plan' | 'bypassPermissions' | 'dontAsk'
 
 export interface UsageLimit {
   usedPercent: number
@@ -555,7 +560,7 @@ export interface DeskApi {
    */
   ticketBranches(ticket: string, prHeads?: { repo: string; branch: string }[]): Promise<TicketBranch[]>
   /** Saves a model and/or effort for this session only (applied the next time it starts). */
-  setSessionLaunch(sessionId: string, choice: { model?: string; effort?: string }): Promise<void>
+  setSessionLaunch(sessionId: string, choice: { model?: string; effort?: string; permissionMode?: 'bypassPermissions' | null }): Promise<void>
   /** Stops a session's process and resolves once it has exited. */
   ptyStop(sessionId: string): Promise<void>
   /** Opens the session's folder (or the project folder for a new chat) in Finder, Terminal or an editor. */
@@ -572,6 +577,12 @@ export interface DeskApi {
   deleteRemoteBranch(slug: string, branch: string): Promise<string>
   /** The session's context window use and the plan's usage limits. */
   sessionUsage(sessionId: string): Promise<SessionUsage>
+  /** The session's permission mode as its terminal shows it; null until it has drawn one. */
+  ptyMode(sessionId: string): Promise<PermissionMode | null>
+  /** Switches mode live (Shift+Tab until the terminal shows it); resolves with the mode reached. */
+  ptySetMode(sessionId: string, mode: PermissionMode): Promise<PermissionMode | null>
+  /** Fires when a session's terminal shows a different mode (Shift+Tab pressed there too). */
+  onPtyMode(cb: (sessionId: string, mode: PermissionMode) => void): () => void
   /** Types /compact or /usage into a session open here and idle at its prompt. */
   sessionCommand(sessionId: string, command: '/compact' | '/usage'): Promise<boolean>
   /** Code editors installed in /Applications that can open a folder. */

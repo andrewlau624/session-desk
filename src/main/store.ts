@@ -162,7 +162,7 @@ export const store = {
   },
 
   sessionLaunch: (sessionId: string): SessionLaunch | null => load().sessionLaunch?.[sessionId] ?? null,
-  setSessionLaunch(sessionId: string, choice: { model?: string; effort?: string }) {
+  setSessionLaunch(sessionId: string, choice: { model?: string; effort?: string; permissionMode?: 'bypassPermissions' }) {
     const d = load()
     const prev = d.sessionLaunch?.[sessionId]
     d.sessionLaunch = { ...d.sessionLaunch, [sessionId]: { ...prev, ...choice, at: Date.now() } }

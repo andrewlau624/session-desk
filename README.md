@@ -184,6 +184,10 @@ Under the terminal, two buttons show the session's model and effort (from Claude
 
 The list comes from the model catalog Claude Code caches for your account (`~/.claude/cache/model-catalog`, refreshed about hourly), so new models appear without an app update: main models first, older ones under More models, each with its own effort levels and badges. Models newer than your installed Claude Code are left out. If the catalog can't be read, a built-in list is used.
 
+## Mode
+
+The button at the left of the footer shows the session's permission mode (read from the mode line Claude Code draws under its prompt) and changes it, as in the Claude desktop app. Auto, Manual, Accept edits and Plan switch live by pressing Shift+Tab for you, the same as cycling it yourself, so nothing restarts and no setting changes. Bypass permissions can only be chosen when Claude starts: after you confirm, the app restarts the session with `--permission-mode bypassPermissions` for that session only. Claude Code then shows its own warning; **No, exit** ends the session and the app forgets the choice. Leaving Bypass restarts the session normally, then switches to the mode you picked.
+
 ## Context and usage limits
 
 The ring at the right of the footer shows how full the session's context window is; click it for the details, as in the Claude desktop app: tokens used of the window, about how far until auto-compact (documented for 1M-context models, ~967K), and your plan's limits: the 5-hour session limit and the weekly limit for all models, each with its reset time. **Compact session** and **See detailed breakdown** send `/compact` and `/usage` to the session when it's idle; neither changes any setting.
