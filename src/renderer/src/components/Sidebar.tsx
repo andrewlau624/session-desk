@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import type { LinearStatus, PrFocus, SessionGroup, SessionSummary } from '../../../shared/types'
+import type { LinearStatus, NerfguardAction, PrFocus, SessionGroup, SessionSummary } from '../../../shared/types'
 import { errorMessage, timeAgo } from '../format'
 import { coreSessionEntries, type SessionActionHandlers } from '../sessionActions'
 import { ArtifactIcon, BoardIcon, BranchIcon, WorktreeIcon, ChevronIcon, FolderPlusIcon, LinkIcon, MoreIcon, PlusIcon, SearchIcon } from './icons'
@@ -34,6 +34,7 @@ interface Props {
   onOpenLinear: () => void
   /** ⌘K: jump anywhere / search conversations. */
   onOpenPalette: () => void
+  onNerfguard: (action: NerfguardAction) => void
 }
 
 const DRAG_TYPE = 'application/x-session-id'
@@ -292,13 +293,13 @@ export function Sidebar(props: Props) {
     <aside className="sidebar">
       {/* Shares the traffic-light row, like the native title bar. */}
       <div className="sidebar-toolbar">
-        <button className="icon-button" title="Jump to… (⌘K)" aria-label="Jump to" onClick={props.onOpenPalette}>
+        <button className="icon-button" data-tip="Jump to… (⌘K)" aria-label="Jump to" onClick={props.onOpenPalette}>
           <SearchIcon />
         </button>
-        <button className="icon-button" title="New group" aria-label="New group" onClick={newGroup}>
+        <button className="icon-button" data-tip="New group" aria-label="New group" onClick={newGroup}>
           <FolderPlusIcon />
         </button>
-        <NerfguardButton notify={notify} />
+        <NerfguardButton notify={notify} onRun={props.onNerfguard} />
       </div>
 
       <nav className="sidebar-nav">

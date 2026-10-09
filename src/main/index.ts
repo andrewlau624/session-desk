@@ -4,7 +4,8 @@ import { join } from 'node:path'
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { CONFIG_NAME, loadProjectConfig, projectConfig, projectConfigStatus, starterConfig, watchProjectConfig } from './projectConfig'
 import { defaultModel, withDefaultContext } from './modelChoice'
-import { nerfguardStatus } from './nerfguard'
+import { findNerfguard, forgetNerfguardStatus, NERFGUARD_ACTIONS, nerfguardStatus } from './nerfguard'
+import { ToolTerminal } from './toolTerminal'
 import { readModelCatalog } from './modelCatalog'
 import { installStatusLine, readUsage } from './usage'
 import type { Column, Kickoff, LinearStatus, PermissionMode, PtyStartRequest, RenameResult, SessionSummary, Settings, TicketBranch } from '../shared/types'
@@ -553,6 +554,25 @@ ipcMain.handle('settings:hideNerfguard', async (_e, hide: unknown) => {
   return settingsView()
 })
 ipcMain.handle('nerfguard:status', (_e, force: unknown) => nerfguardStatus(force === true))
+const tool = new ToolTerminal(
+  (data) => win?.webContents.send('tool:data', data),
+  (code) => {
+    forgetNerfguardStatus()
+    win?.webContents.send('tool:exit', code)
+  }
+)
+ipcMain.handle('nerfguard:run', async (_e, action: unknown, cols: unknown, rows: unknown) => {
+  // Only the listed commands, never arguments from the page.
+  const args = typeof action === 'string' && Object.hasOwn(NERFGUARD_ACTIONS, action) ? NERFGUARD_ACTIONS[action as keyof typeof NERFGUARD_ACTIONS] : null
+  if (!args) throw new Error(`unknown NerfGuard command ${String(action)}`)
+  const bin = await findNerfguard()
+  if (!bin) throw new Error('NerfGuard isn\u2019t installed')
+  const size = (n: unknown, d: number) => (typeof n === 'number' && n > 0 && n < 1000 ? Math.floor(n) : d)
+  await tool.start(bin, args, size(cols, 100), size(rows, 30))
+})
+ipcMain.on('tool:write', (_e, data: unknown) => typeof data === 'string' && tool.write(data))
+ipcMain.on('tool:resize', (_e, cols: unknown, rows: unknown) => typeof cols === 'number' && typeof rows === 'number' && tool.resize(cols, rows))
+ipcMain.on('tool:stop', () => tool.stop())
 const hookAction = (a: unknown) => {
   if (a !== 'install' && a !== 'uninstall') throw new Error('unknown action')
   return a
@@ -727,6 +747,7 @@ app.whenReady().then(() => {
     clearInterval(liveness)
     stopConfigWatch()
     ptys.killAll()
+    tool.kill()
   })
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -739,6 +760,7 @@ app.whenReady().then(() => {
 for (const sig of ['SIGTERM', 'SIGINT'] as const) {
   process.on(sig, () => {
     ptys.killAll()
+    tool.kill()
     app.exit(0)
   })
 }

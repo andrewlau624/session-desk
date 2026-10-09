@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process'
 import { constants, promises as fs } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import type { NerfguardStatus } from '../shared/types'
+import type { NerfguardAction, NerfguardStatus } from '../shared/types'
 import { loginPath } from './env'
 
 /**
@@ -63,10 +63,25 @@ function run(bin: string, args: string[]): Promise<string> {
   )
 }
 
+/** What the app can run, each in its terminal panel since they may prompt. */
+export const NERFGUARD_ACTIONS: Record<NerfguardAction, string[]> = {
+  enable: ['enable'],
+  disable: ['disable'],
+  login: ['login'],
+  logout: ['logout'],
+  dash: ['dash'],
+  logs: ['logs']
+}
+
 // One check at a time, reused for a minute: `status` starts Python and may refresh the sign-in.
 const FRESH_MS = 60_000
 let last: NerfguardStatus | null = null
 let inFlight: Promise<NerfguardStatus> | null = null
+
+/** After a command ran: the next read checks again. */
+export function forgetNerfguardStatus(): void {
+  last = null
+}
 
 export function nerfguardStatus(force = false): Promise<NerfguardStatus> {
   if (inFlight) return inFlight

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { NerfguardStatus } from '../../../shared/types'
+import type { NerfguardAction, NerfguardStatus } from '../../../shared/types'
 import { errorMessage } from '../format'
 import { PopupMenu, type MenuEntry } from './PopupMenu'
 
@@ -40,8 +40,28 @@ export function nerfguardSummary(s: NerfguardStatus): string[] {
   return signIn ? [routing, signIn] : [routing]
 }
 
+/** What the menu offers to run, for the state it's in. */
+export function nerfguardActions(s: NerfguardStatus): { label: string; action: NerfguardAction; title?: string }[] {
+  if (!s.installed || s.error) return []
+  const routing = !s.enabled
+    ? [{ label: 'Turn on\u2026', action: 'enable' as const, title: 'Routes Claude Code through NerfGuard (nerfguard enable)' }]
+    : [
+        ...(s.gateway !== 'running'
+          ? [{ label: 'Turn on again\u2026', action: 'enable' as const, title: 'Starts its gateway again (nerfguard enable)' }]
+          : []),
+        { label: 'Turn off\u2026', action: 'disable' as const, title: 'Claude Code connects directly again (nerfguard disable)' }
+      ]
+  const account =
+    s.signIn === 'signed-in'
+      ? [{ label: 'Sign out\u2026', action: 'logout' as const }]
+      : [{ label: 'Sign in\u2026', action: 'login' as const }]
+  return [...routing, ...account]
+}
+
 interface Props {
   notify: (text: string, kind?: 'info' | 'error') => void
+  /** Opens the panel that runs a NerfGuard command in a terminal. */
+  onRun: (action: NerfguardAction) => void
 }
 
 /**
@@ -49,7 +69,7 @@ interface Props {
  * is routed through it. Shown while it isn't installed too, unless Settings
  * hides it.
  */
-export function NerfguardButton({ notify }: Props) {
+export function NerfguardButton({ notify, onRun }: Props) {
   const [status, setStatus] = useState<NerfguardStatus | null>(null)
   const [hidden, setHidden] = useState(false)
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
@@ -65,12 +85,16 @@ export function NerfguardButton({ notify }: Props) {
     const timer = setInterval(() => void load(), POLL_MS)
     const onFocus = () => void load()
     window.addEventListener('focus', onFocus)
+    // A command finished in the panel.
+    const onChanged = () => void load(true)
+    window.addEventListener('nerfguard:changed', onChanged)
     const readPref = () => void window.desk.getSettings().then((s) => setHidden(s.hideNerfguardWhenMissing))
     readPref()
     const off = window.desk.onSettingsChanged(readPref)
     return () => {
       clearInterval(timer)
       window.removeEventListener('focus', onFocus)
+      window.removeEventListener('nerfguard:changed', onChanged)
       off()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -80,10 +104,16 @@ export function NerfguardButton({ notify }: Props) {
   const { look, title } = nerfguardLook(status)
   const entries: MenuEntry[] = [
     { heading: `NerfGuard${status?.version ? ` ${status.version}` : ''}` },
-    ...(status ? nerfguardSummary(status).map((line): MenuEntry => ({ heading: line })) : []),
+    ...(status ? nerfguardSummary(status).map((line): MenuEntry => ({ note: line })) : []),
     'divider',
+    ...(status ? nerfguardActions(status) : []).map((a): MenuEntry => ({ label: a.label, title: a.title, onSelect: () => onRun(a.action) })),
     ...(status?.installed
-      ? [{ label: 'Check again', onSelect: () => void load(true) }]
+      ? [
+          'divider' as const,
+          { label: 'Dashboard', onSelect: () => onRun('dash') },
+          { label: 'Live logs', onSelect: () => onRun('logs') },
+          { label: 'Check again', onSelect: () => void load(true) }
+        ]
       : [
           {
             label: 'Hide until it’s installed',
@@ -98,7 +128,7 @@ export function NerfguardButton({ notify }: Props) {
     <>
       <button
         className={`icon-button nerfguard-button ng-${look}`}
-        title={title}
+        data-tip={title}
         aria-label={title}
         onClick={(e) => {
           // Re-check on open, so the menu never shows a stale state.

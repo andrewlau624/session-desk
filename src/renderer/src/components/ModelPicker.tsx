@@ -44,7 +44,7 @@ export function pickerMenus(
   })
   const main = catalog.models.filter((m) => m.section === 'main')
   const more = catalog.models.filter((m) => m.section === 'overflow')
-  const footnote: MenuEntry[] = ['divider', { heading: blocked ?? 'For this session only; restarts it' }]
+  const footnote: MenuEntry[] = ['divider', { note: blocked ?? 'For this session only; restarts it' }]
   const models: MenuEntry[] = [...main.map(option), ...(more.length ? ['divider' as const, { label: 'More models', submenu: more.map(option) }] : []), ...footnote]
   const model = current.modelId ? catalog.models.find((m) => sameModel(current.modelId!, m.id)) : undefined
   // A model the catalog doesn't know (or a new chat on defaults): offer the levels other models share.

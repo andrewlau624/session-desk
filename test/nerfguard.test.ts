@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { parseNerfguardStatus } from '../src/main/nerfguard'
-import { nerfguardLook, nerfguardSummary } from '../src/renderer/src/components/NerfguardButton'
+import { nerfguardActions, nerfguardLook, nerfguardSummary } from '../src/renderer/src/components/NerfguardButton'
+import { routeReady } from '../src/renderer/src/components/NerfguardPanel'
 import type { NerfguardStatus } from '../src/shared/types'
 
 // `nerfguard status` as printed by 0.3.16 (trimmed; the plugin list that follows is ignored).
@@ -80,5 +81,41 @@ describe('the NerfGuard button', () => {
       'Sign-in expired (dev@example.com)'
     ])
     expect(nerfguardSummary({ ...base, installed: false })).toEqual(['Not installed'])
+  })
+})
+
+describe('NerfGuard commands', () => {
+  const base: NerfguardStatus = {
+    installed: true,
+    version: '0.3.16',
+    enabled: false,
+    baseUrl: null,
+    gateway: 'down',
+    signIn: 'expired',
+    email: null,
+    checkedAt: 0
+  }
+  const actions = (s: NerfguardStatus) => nerfguardActions(s).map((a) => a.action)
+
+  it('offers what fits the state', () => {
+    expect(actions(base)).toEqual(['enable', 'login'])
+    expect(actions({ ...base, enabled: true, gateway: 'running', signIn: 'signed-in' })).toEqual(['disable', 'logout'])
+    // On but its gateway is down: turning on again restarts it.
+    expect(actions({ ...base, enabled: true })).toEqual(['enable', 'disable', 'login'])
+    expect(actions({ ...base, installed: false })).toEqual([])
+    expect(actions({ ...base, error: 'boom' })).toEqual([])
+  })
+
+  it('offers restarts only once the new route works', () => {
+    const on = { ...base, enabled: true, gateway: 'running' as const }
+    expect(routeReady('enable', 0, on)).toBe(true)
+    // Enabled, but a session restarted now couldn't connect.
+    expect(routeReady('enable', 0, { ...on, gateway: 'down' })).toBe(false)
+    expect(routeReady('enable', 1, on)).toBe(false)
+    expect(routeReady('enable', 0, null)).toBe(false)
+    expect(routeReady('disable', 0, base)).toBe(true)
+    expect(routeReady('disable', 0, on)).toBe(false)
+    expect(routeReady('login', 0, on)).toBeNull()
+    expect(routeReady('logs', 0, on)).toBeNull()
   })
 })

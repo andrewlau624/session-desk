@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { BoardCard, Kickoff, LinearIssue, LinearStatus, PermissionMode, PrBranch, SessionGroup, SessionLaunch, SessionSummary, TicketBranch } from '../../shared/types'
+import type { BoardCard, Kickoff, LinearIssue, LinearStatus, NerfguardAction, PermissionMode, PrBranch, SessionGroup, SessionLaunch, SessionSummary, TicketBranch } from '../../shared/types'
 import { Board } from './components/Board'
 import { LinearSettings } from './components/LinearSettings'
 import { SessionHeader } from './components/SessionHeader'
@@ -15,6 +15,7 @@ import { errorMessage, folderName, setLinearWorkspaceKey } from './format'
 import { FolderChip } from './components/FolderChip'
 import { ModelPicker } from './components/ModelPicker'
 import { UsageButton } from './components/UsageButton'
+import { NerfguardPanel } from './components/NerfguardPanel'
 import { ModeButton, modeLabel } from './components/ModeButton'
 import { busyReason, readiness, startWork, startWorkNotice } from './startWork'
 
@@ -383,6 +384,23 @@ export function App() {
     }
   }
 
+  // NerfGuard changes the route new claude processes take; idle sessions can restart onto it.
+  const [nerfguardAction, setNerfguardAction] = useState<NerfguardAction | null>(null)
+  const idleHere = sessions.filter((s) => readiness(s, runningIds) === 'idle').map((s) => s.id)
+  const openForRoute = { idle: idleHere.length, busy: runningIds.size - idleHere.length }
+  const restartIdle = async () => {
+    const ids = idleHere
+    await Promise.all(ids.map((id) => window.desk.ptyStop(id)))
+    setTerms((ts) =>
+      ts.map((t) =>
+        ids.includes(t.id)
+          ? { ...t, resume: scanned.some((s) => s.id === t.id), kickoff: undefined, prBranch: undefined, gen: t.gen + 1, exited: false }
+          : t
+      )
+    )
+    return ids.length
+  }
+
   const markExited = (id: string) => setTerms((ts) => ts.map((t) => (t.id === id ? { ...t, exited: true } : t)))
   // Resume only works once a transcript exists; a session that exited before
   // anything was sent starts over under the same id.
@@ -408,6 +426,7 @@ export function App() {
         linear={linear}
         onOpenLinear={() => setShowSettings(true)}
         onOpenPalette={() => setPaletteOpen(true)}
+        onNerfguard={setNerfguardAction}
       />
       <main className="main">
         {/* Title row shared with the traffic lights, as in the native app. */}
@@ -600,6 +619,15 @@ export function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {nerfguardAction && (
+        <NerfguardPanel
+          action={nerfguardAction}
+          open={openForRoute}
+          onRestartIdle={restartIdle}
+          onClose={() => setNerfguardAction(null)}
+        />
       )}
 
       {showSettings && (

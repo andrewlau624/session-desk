@@ -5,6 +5,8 @@ export type MenuEntry =
   | 'divider'
   /** A small section title (not selectable). */
   | { heading: string }
+  /** A line of plain text: a status or a footnote (not selectable). */
+  | { note: string }
   | {
       label: string
       onSelect?: () => void
@@ -91,6 +93,7 @@ export function PopupMenu({ anchor, entries, onClose, align = 'left' }: Props) {
       {current.map((entry, i) => {
         if (entry === 'divider') return <div key={`d${i}`} className="menu-divider" />
         if ('heading' in entry) return <div key={`h${i}`} className="menu-heading">{entry.heading}</div>
+        if ('note' in entry) return <div key={`n${i}`} className="menu-note">{entry.note}</div>
         if (entry.input) return <MenuInput key={`i${i}`} {...entry.input} onDone={onClose} />
         return (
           <button

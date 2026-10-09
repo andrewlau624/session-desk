@@ -19,7 +19,7 @@ interface Props {
   onExit: (code: number) => void
 }
 
-function themeFromCss(): Record<string, string> {
+export function themeFromCss(): Record<string, string> {
   const css = getComputedStyle(document.documentElement)
   const v = (name: string) => css.getPropertyValue(name).trim()
   return {

@@ -79,7 +79,7 @@ describe("Claude Code's model catalog", () => {
 
 describe('the picker menus from the catalog', () => {
   const catalog = { source: 'claude-code' as const, fetchedAt: 1, models: parseCatalog(catalogFile(MODELS))! }
-  const label = (e: unknown) => (e === 'divider' ? '—' : (e as { heading?: string; label?: string }).heading ?? (e as { label: string }).label)
+  const label = (e: unknown) => (e === 'divider' ? '—' : (e as { heading?: string; note?: string }).heading ?? (e as { note?: string }).note ?? (e as { label: string }).label)
 
   it('main models, then More models; the current one ticked even when its ID has a date', () => {
     const m = pickerMenus(catalog, { modelId: 'claude-haiku-4-5', effort: null }, null, () => {})

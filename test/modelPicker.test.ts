@@ -44,7 +44,7 @@ describe('keeping the 1M context your default uses', () => {
 
 describe('Move to group', () => {
   vi.stubGlobal('window', { desk: {} })
-  const labels = (e: ReturnType<typeof moveEntries>) => e.map((x) => (x === 'divider' ? '—' : 'heading' in x ? `#${x.heading}` : x.label))
+  const labels = (e: ReturnType<typeof moveEntries>) => e.map((x) => (x === 'divider' ? '—' : 'heading' in x ? `#${x.heading}` : 'note' in x ? `#${x.note}` : x.label))
 
   it('says there are no groups yet, and offers New group…', () => {
     const e = moveEntries(session({}), [], () => {})

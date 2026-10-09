@@ -469,6 +469,9 @@ export interface Settings {
   hideNerfguardWhenMissing: boolean
 }
 
+/** NerfGuard commands the app runs in its terminal panel. */
+export type NerfguardAction = 'enable' | 'disable' | 'login' | 'logout' | 'dash' | 'logs'
+
 /** NerfGuard (nerfguard.com), as `nerfguard status` reports it. */
 export interface NerfguardStatus {
   installed: boolean
@@ -672,6 +675,14 @@ export interface DeskApi {
   setHideNerfguard(hide: boolean): Promise<Settings>
   /** Reused for a minute unless `force`. */
   nerfguardStatus(force?: boolean): Promise<NerfguardStatus>
+  /** Runs a NerfGuard command in the panel's terminal; one at a time. */
+  nerfguardRun(action: NerfguardAction, cols: number, rows: number): Promise<void>
+  toolWrite(data: string): void
+  toolResize(cols: number, rows: number): void
+  /** Ctrl-C, then kills it if it doesn't stop. */
+  toolStop(): void
+  onToolData(cb: (data: string) => void): () => void
+  onToolExit(cb: (code: number) => void): () => void
   /** Writes a starter .session-desk.json in the project folder (never overwrites). */
   createProjectConfig(): Promise<Settings>
   /** Opens the project's .session-desk.json in the default editor. */

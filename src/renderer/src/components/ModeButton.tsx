@@ -42,7 +42,7 @@ export function ModeButton({
         onSelect: () => (m.id === 'bypassPermissions' ? setConfirmBypass(true) : onChoose(m.id))
       })
     ),
-    ...(blocked ? ['divider' as const, { heading: blocked }] : [])
+    ...(blocked ? ['divider' as const, { note: blocked }] : [])
   ]
   return (
     <>

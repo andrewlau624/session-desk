@@ -614,10 +614,8 @@ a:hover {
 }
 
 .panel h2 {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   color: var(--text-muted);
   margin: 0 0 6px;
 }
@@ -672,6 +670,10 @@ a:hover {
 .term-host {
   flex: 1;
   min-height: 0;
+}
+
+/* Padding goes on xterm's own element: the fit addon subtracts it there, but not on the host. */
+.term-host .xterm {
   padding: 8px 0 0 12px;
 }
 
@@ -1175,10 +1177,17 @@ a:hover {
 
 .menu-heading {
   padding: 6px 10px 2px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+/* A status line or footnote in a menu: plain text, wrapped, not a heading. */
+.menu-note {
+  max-width: 280px;
+  padding: 3px 10px;
+  font-size: 12px;
+  line-height: 1.4;
   color: var(--text-muted);
 }
 
@@ -1815,11 +1824,9 @@ a:hover {
 
 .palette-section {
   padding: 8px 10px 3px;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 .palette-item {
@@ -1988,11 +1995,9 @@ mark.hl {
 }
 
 .setting-label {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
+  color: var(--text);
 }
 
 .setting-value {
@@ -2077,4 +2082,64 @@ mark.hl {
 
 .nerfguard-button.ng-missing {
   opacity: 0.7;
+}
+
+/*
+ * Tooltips for the title-bar row: macOS doesn't show native (title) tooltips
+ * there with a hidden-inset title bar, so these are drawn by the page.
+ */
+[data-tip] {
+  position: relative;
+}
+
+[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 60;
+  width: max-content;
+  max-width: 240px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: left;
+  white-space: normal;
+  pointer-events: none;
+  /* Appears after a short hover, like a native tooltip. */
+  animation: tip-in 0.12s 0.5s both;
+}
+
+@keyframes tip-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* The NerfGuard panel: a command's own terminal, so its prompts can be answered. */
+.nerfguard-panel {
+  width: min(760px, calc(100% - 32px));
+}
+
+.nerfguard-term {
+  height: 340px;
+  padding: 8px 4px 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--term-bg);
+  overflow: hidden;
+}
+
+.nerfguard-term-host {
+  height: 100%;
+}
+
+.nerfguard-term .xterm-viewport {
+  background-color: var(--term-bg) !important;
 }
