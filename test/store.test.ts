@@ -14,7 +14,7 @@ describe('store', () => {
   it('reads older files: legacy waiting flags and missing sections', () => {
     expect(store.waitingSince('ENG-9')).toBe(0)
     expect(store.groups()).toEqual([])
-    expect(store.prefs()).toEqual({ notify: true, notifyElsewhere: false })
+    expect(store.prefs()).toEqual({ notify: true, notifyElsewhere: false, hideNerfguardWhenMissing: false })
     expect(store.links()).toEqual({ a: 'ENG-1' })
   })
 

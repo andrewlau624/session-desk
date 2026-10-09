@@ -194,6 +194,12 @@ The ring at the right of the footer shows how full the session's context window 
 
 The numbers come from Claude Code's status line input. Sessions this app starts get a status line of the app's own, passed with `--settings` for that session only (your settings never change), which saves that input to `~/.session-desk/usage/` and then runs your own status line, if you have one, so what you see in the terminal stays the same. A session started elsewhere shows only the tokens in its last reply, from its transcript. Claude Code doesn't report the per-model weekly limit, so that one isn't shown.
 
+## NerfGuard
+
+[NerfGuard](https://nerfguard.com) routes Claude Code through a local gateway: `nerfguard enable` sets `ANTHROPIC_BASE_URL` in `~/.claude/settings.json`, and every `claude` reads that, so sessions started here go through it just as terminal ones do. Sessions already running keep their route until they restart.
+
+The shield next to Search at the top left shows its state: grey when off, green with a check when on and its gateway answers, amber when it's on but the gateway isn't running or you're signed out, crossed out when it isn't installed. Click it for the version, the routing and who's signed in. The app finds `nerfguard` on your login shell's PATH and reads `nerfguard status` (which checks the sign-in with NerfGuard's server) when it opens, every few minutes, when its window comes to the front and when you click the shield; it never changes anything. **Settings → NerfGuard** hides the shield while NerfGuard isn't installed.
+
 ## Sidebar
 
 Each session row has a `…` menu on hover (or right-click): Rename, Move to group, Archive, Delete. The title-bar menu has the same items plus Stop, Open in Terminal, copy commands and Show transcript.

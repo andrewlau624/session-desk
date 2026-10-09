@@ -120,6 +120,25 @@ export function SettingsDialog({ linear, onManageLinear, onClose, notify }: Prop
             <HookSection notify={notify} />
 
             <section className="setting">
+              <div className="setting-label">NerfGuard</div>
+              <p className="setting-hint">
+                The shield next to Search at the top left shows whether Claude Code, and so every session here, goes through NerfGuard. It shows
+                while NerfGuard isn&rsquo;t installed too.
+              </p>
+              <label className="check-row">
+                <input
+                  type="checkbox"
+                  checked={s.hideNerfguardWhenMissing}
+                  onChange={(e) => {
+                    const hide = e.target.checked
+                    void act(() => window.desk.setHideNerfguard(hide))
+                  }}
+                />
+                Hide it when NerfGuard isn&rsquo;t installed
+              </label>
+            </section>
+
+            <section className="setting">
               <div className="setting-label">Linear for this project</div>
               <div className="setting-value">
                 {linear?.connected ? `Connected as ${linear.viewer}` : 'Not connected'}

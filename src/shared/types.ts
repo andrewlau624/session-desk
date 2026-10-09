@@ -465,6 +465,24 @@ export interface Settings {
   claudeDirSessions: number
   /** The project folder's .session-desk.json; null without a project folder. */
   project: ProjectConfigStatus | null
+  /** Hide the NerfGuard button while NerfGuard isn't installed (shown by default). */
+  hideNerfguardWhenMissing: boolean
+}
+
+/** NerfGuard (nerfguard.com), as `nerfguard status` reports it. */
+export interface NerfguardStatus {
+  installed: boolean
+  version: string | null
+  /** Claude Code is routed through its gateway: ANTHROPIC_BASE_URL is set in Claude's settings. */
+  enabled: boolean
+  baseUrl: string | null
+  /** Whether the local gateway answers; null when unknown. */
+  gateway: 'running' | 'down' | null
+  signIn: 'signed-in' | 'expired' | 'signed-out' | 'unknown'
+  email: string | null
+  /** Why the status couldn't be read, when it's installed. */
+  error?: string
+  checkedAt: number
 }
 
 /**
@@ -651,6 +669,9 @@ export interface DeskApi {
   pickFolder(key: 'workspace' | 'claudeDir'): Promise<Settings>
   resetFolder(key: 'workspace' | 'claudeDir'): Promise<Settings>
   onSettingsChanged(cb: () => void): () => void
+  setHideNerfguard(hide: boolean): Promise<Settings>
+  /** Reused for a minute unless `force`. */
+  nerfguardStatus(force?: boolean): Promise<NerfguardStatus>
   /** Writes a starter .session-desk.json in the project folder (never overwrites). */
   createProjectConfig(): Promise<Settings>
   /** Opens the project's .session-desk.json in the default editor. */

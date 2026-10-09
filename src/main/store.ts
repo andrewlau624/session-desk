@@ -59,9 +59,11 @@ export interface Prefs {
   notify: boolean
   /** Also for sessions open in Claude desktop or a terminal (they notify on their own). */
   notifyElsewhere: boolean
+  /** Hide the NerfGuard button while NerfGuard isn't installed. */
+  hideNerfguardWhenMissing: boolean
 }
 
-const DEFAULT_PREFS: Prefs = { notify: true, notifyElsewhere: false }
+const DEFAULT_PREFS: Prefs = { notify: true, notifyElsewhere: false, hideNerfguardWhenMissing: false }
 
 const empty = (): Data => ({
   links: {},

@@ -2061,3 +2061,20 @@ mark.hl {
   background: var(--drop-bg);
   font-size: 13px;
 }
+
+/* NerfGuard's shield at the top right: muted when off or not installed. */
+.nerfguard-button {
+  flex: none;
+}
+
+.nerfguard-button.ng-on {
+  color: var(--running);
+}
+
+.nerfguard-button.ng-warn {
+  color: var(--elsewhere);
+}
+
+.nerfguard-button.ng-missing {
+  opacity: 0.7;
+}

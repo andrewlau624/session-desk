@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { CONFIG_NAME, loadProjectConfig, projectConfig, projectConfigStatus, starterConfig, watchProjectConfig } from './projectConfig'
 import { defaultModel, withDefaultContext } from './modelChoice'
+import { nerfguardStatus } from './nerfguard'
 import { readModelCatalog } from './modelCatalog'
 import { installStatusLine, readUsage } from './usage'
 import type { Column, Kickoff, LinearStatus, PermissionMode, PtyStartRequest, RenameResult, SessionSummary, Settings, TicketBranch } from '../shared/types'
@@ -44,7 +45,7 @@ if (!app.requestSingleInstanceLock()) {
 
 
 // Links we hand to the OS browser. Anything else is ignored.
-const EXTERNAL_HOSTS = new Set(['github.com', 'linear.app', 'claude.ai'])
+const EXTERNAL_HOSTS = new Set(['github.com', 'linear.app', 'claude.ai', 'nerfguard.com'])
 
 let win: BrowserWindow | null = null
 // The session on screen, as the renderer reports it; null for other views.
@@ -466,7 +467,8 @@ function settingsView(): Settings {
     claudeDir: dir,
     claudeDirIsDefault: dir === defaultClaudeDir(),
     claudeDirSessions: describeClaudeDir(dir).sessions,
-    project: projectConfigStatus()
+    project: projectConfigStatus(),
+    hideNerfguardWhenMissing: store.prefs().hideNerfguardWhenMissing
   }
 }
 
@@ -545,6 +547,12 @@ ipcMain.handle('project:openConfig', async () => {
 })
 
 ipcMain.handle('settings:get', () => settingsView())
+ipcMain.handle('settings:hideNerfguard', async (_e, hide: unknown) => {
+  await store.setPref('hideNerfguardWhenMissing', hide === true)
+  win?.webContents.send('settings:changed')
+  return settingsView()
+})
+ipcMain.handle('nerfguard:status', (_e, force: unknown) => nerfguardStatus(force === true))
 const hookAction = (a: unknown) => {
   if (a !== 'install' && a !== 'uninstall') throw new Error('unknown action')
   return a

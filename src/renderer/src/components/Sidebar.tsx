@@ -3,6 +3,7 @@ import type { LinearStatus, PrFocus, SessionGroup, SessionSummary } from '../../
 import { errorMessage, timeAgo } from '../format'
 import { coreSessionEntries, type SessionActionHandlers } from '../sessionActions'
 import { ArtifactIcon, BoardIcon, BranchIcon, WorktreeIcon, ChevronIcon, FolderPlusIcon, LinkIcon, MoreIcon, PlusIcon, SearchIcon } from './icons'
+import { NerfguardButton } from './NerfguardButton'
 import { PopupMenu, type MenuEntry } from './PopupMenu'
 import { RenameField } from './SessionMenu'
 
@@ -297,6 +298,7 @@ export function Sidebar(props: Props) {
         <button className="icon-button" title="New group" aria-label="New group" onClick={newGroup}>
           <FolderPlusIcon />
         </button>
+        <NerfguardButton notify={notify} />
       </div>
 
       <nav className="sidebar-nav">
