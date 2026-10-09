@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { Terminal as XTerm } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
-import type { NerfguardAction, NerfguardStatus } from '../../../shared/types'
+import { NERFGUARD_INSTALL_COMMAND, type NerfguardAction, type NerfguardStatus } from '../../../shared/types'
 import { errorMessage } from '../format'
 import { themeFromCss } from './Terminal'
 
 export const NERFGUARD_TITLES: Record<NerfguardAction, string> = {
+  install: 'Installing NerfGuard',
   enable: 'Turning NerfGuard on',
   disable: 'Turning NerfGuard off',
   login: 'Signing in to NerfGuard',
@@ -15,14 +16,14 @@ export const NERFGUARD_TITLES: Record<NerfguardAction, string> = {
 }
 
 /**
- * Whether sessions can switch route now: after turning on, only once its
+ * Whether sessions can switch route now: after turning on (installing turns it on too), only once its
  * gateway answers (a session restarted before that can't connect); after
  * turning off, straight away. Null for commands that don't change the route.
  */
 export function routeReady(action: NerfguardAction, code: number | null, after: NerfguardStatus | null): boolean | null {
-  if (action !== 'enable' && action !== 'disable') return null
+  if (action !== 'install' && action !== 'enable' && action !== 'disable') return null
   if (code !== 0 || !after) return false
-  return action === 'enable' ? after.enabled && after.gateway === 'running' : !after.enabled
+  return action !== 'disable' ? after.enabled && after.gateway === 'running' : !after.enabled
 }
 
 interface Props {
@@ -42,8 +43,11 @@ export function NerfguardPanel({ action, open, onRestartIdle, onClose }: Props) 
   const [code, setCode] = useState<number | null>(null)
   const [after, setAfter] = useState<NerfguardStatus | null>(null)
   const [restarted, setRestarted] = useState<number | null>(null)
+  // Installing runs a script from the web: say what, and wait for a yes.
+  const [confirmed, setConfirmed] = useState(action !== 'install')
 
   useEffect(() => {
+    if (!confirmed) return
     const xterm = new XTerm({
       fontFamily: '"SF Mono", Menlo, monospace',
       fontSize: 12,
@@ -83,11 +87,11 @@ export function NerfguardPanel({ action, open, onRestartIdle, onClose }: Props) 
       resize.dispose()
       xterm.dispose()
     }
-    // One panel runs one command.
+    // One panel runs one command, once confirmed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [confirmed])
 
-  const running = code === null
+  const running = confirmed && code === null
   const close = () => {
     if (running) window.desk.toolStop()
     onClose()
@@ -98,11 +102,23 @@ export function NerfguardPanel({ action, open, onRestartIdle, onClose }: Props) 
   return (
     <div className="modal-backdrop">
       <div className="modal nerfguard-panel" role="dialog" aria-label={NERFGUARD_TITLES[action]}>
-        <h1>{NERFGUARD_TITLES[action]}</h1>
-        {/* The frame carries the border and padding; the fit addon measures the host, so it must have none. */}
-        <div className="nerfguard-term">
-          <div className="nerfguard-term-host" ref={host} />
-        </div>
+        <h1>{confirmed ? NERFGUARD_TITLES[action] : 'Install NerfGuard?'}</h1>
+        {!confirmed ? (
+          <>
+            <p>This runs NerfGuard&rsquo;s installer from nerfguard.com, in a terminal here:</p>
+            <pre className="nerfguard-command">{NERFGUARD_INSTALL_COMMAND}</pre>
+            <p className="setting-hint">
+              It installs into <code>~/.nerfguard</code> with its commands in <code>~/.local/bin</code> (adding that to your PATH in
+              your shell profile if needed), then runs its setup: sign-in and turning NerfGuard on, which points Claude Code at its
+              local gateway. You answer its questions in the terminal. <code>nerfguard disable</code> (Turn off) undoes the routing.
+            </p>
+          </>
+        ) : (
+          /* The frame carries the border and padding; the fit addon measures the host, so it must have none. */
+          <div className="nerfguard-term">
+            <div className="nerfguard-term-host" ref={host} />
+          </div>
+        )}
         {ready !== null && code === 0 && anyOpen && (
           <p className="setting-hint">
             {!after
@@ -120,9 +136,20 @@ export function NerfguardPanel({ action, open, onRestartIdle, onClose }: Props) 
               Restart {open.idle} idle session{open.idle === 1 ? '' : 's'}
             </button>
           )}
-          <button className={`btn ${running ? '' : 'btn-primary'}`} onClick={close}>
-            {running ? 'Stop' : 'Close'}
-          </button>
+          {!confirmed ? (
+            <>
+              <button className="btn" onClick={onClose}>
+                Cancel
+              </button>
+              <button className="btn btn-primary" onClick={() => setConfirmed(true)}>
+                Install
+              </button>
+            </>
+          ) : (
+            <button className={`btn ${running ? '' : 'btn-primary'}`} onClick={close}>
+              {running ? 'Stop' : 'Close'}
+            </button>
+          )}
         </div>
       </div>
     </div>

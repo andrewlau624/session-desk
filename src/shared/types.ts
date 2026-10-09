@@ -469,8 +469,11 @@ export interface Settings {
   hideNerfguardWhenMissing: boolean
 }
 
+/** NerfGuard's own installer, as nerfguard.com gives it; it then runs setup (`nerfguard enable`) in the same terminal. */
+export const NERFGUARD_INSTALL_COMMAND = 'curl -fsSL https://nerfguard.com/install.sh | bash'
+
 /** NerfGuard commands the app runs in its terminal panel. */
-export type NerfguardAction = 'enable' | 'disable' | 'login' | 'logout' | 'dash' | 'logs'
+export type NerfguardAction = 'install' | 'enable' | 'disable' | 'login' | 'logout' | 'dash' | 'logs'
 
 /** NerfGuard (nerfguard.com), as `nerfguard status` reports it. */
 export interface NerfguardStatus {

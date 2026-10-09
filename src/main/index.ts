@@ -9,7 +9,7 @@ import { ToolTerminal } from './toolTerminal'
 import { readModelCatalog } from './modelCatalog'
 import { installStatusLine, readUsage } from './usage'
 import type { Column, Kickoff, LinearStatus, PermissionMode, PtyStartRequest, RenameResult, SessionSummary, Settings, TicketBranch } from '../shared/types'
-import { COLUMNS, EFFORT_CHOICES } from '../shared/types'
+import { COLUMNS, EFFORT_CHOICES, NERFGUARD_INSTALL_COMMAND } from '../shared/types'
 import { refreshPrInfo, requestGreptileReview, withInfo } from './github'
 import { Indicators } from './indicators'
 import { fetchBoard, fetchIssue, invalidate, linearStatus, moveIssue, refreshPrTickets, resetLinear } from './linear'
@@ -562,12 +562,14 @@ const tool = new ToolTerminal(
   }
 )
 ipcMain.handle('nerfguard:run', async (_e, action: unknown, cols: unknown, rows: unknown) => {
+  const size = (n: unknown, d: number) => (typeof n === 'number' && n > 0 && n < 1000 ? Math.floor(n) : d)
+  // The installer is fixed here, never taken from the page; you confirmed it in the panel.
+  if (action === 'install') return tool.start('/bin/bash', ['-c', NERFGUARD_INSTALL_COMMAND], size(cols, 100), size(rows, 30))
   // Only the listed commands, never arguments from the page.
   const args = typeof action === 'string' && Object.hasOwn(NERFGUARD_ACTIONS, action) ? NERFGUARD_ACTIONS[action as keyof typeof NERFGUARD_ACTIONS] : null
   if (!args) throw new Error(`unknown NerfGuard command ${String(action)}`)
   const bin = await findNerfguard()
   if (!bin) throw new Error('NerfGuard isn\u2019t installed')
-  const size = (n: unknown, d: number) => (typeof n === 'number' && n > 0 && n < 1000 ? Math.floor(n) : d)
   await tool.start(bin, args, size(cols, 100), size(rows, 30))
 })
 ipcMain.on('tool:write', (_e, data: unknown) => typeof data === 'string' && tool.write(data))

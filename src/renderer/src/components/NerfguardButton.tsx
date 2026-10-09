@@ -115,6 +115,7 @@ export function NerfguardButton({ notify, onRun }: Props) {
           { label: 'Check again', onSelect: () => void load(true) }
         ]
       : [
+          { label: 'Install…', title: 'Runs NerfGuard’s installer in a terminal here', onSelect: () => onRun('install') },
           {
             label: 'Hide until it’s installed',
             title: 'Settings can show it again',

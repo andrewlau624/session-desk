@@ -64,7 +64,7 @@ function run(bin: string, args: string[]): Promise<string> {
 }
 
 /** What the app can run, each in its terminal panel since they may prompt. */
-export const NERFGUARD_ACTIONS: Record<NerfguardAction, string[]> = {
+export const NERFGUARD_ACTIONS: Record<Exclude<NerfguardAction, 'install'>, string[]> = {
   enable: ['enable'],
   disable: ['disable'],
   login: ['login'],

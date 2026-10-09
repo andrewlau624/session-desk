@@ -115,6 +115,9 @@ describe('NerfGuard commands', () => {
     expect(routeReady('enable', 0, null)).toBe(false)
     expect(routeReady('disable', 0, base)).toBe(true)
     expect(routeReady('disable', 0, on)).toBe(false)
+    // Installing runs setup, which turns it on: same rule.
+    expect(routeReady('install', 0, on)).toBe(true)
+    expect(routeReady('install', 0, { ...on, gateway: 'down' })).toBe(false)
     expect(routeReady('login', 0, on)).toBeNull()
     expect(routeReady('logs', 0, on)).toBeNull()
   })

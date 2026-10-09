@@ -2143,3 +2143,13 @@ mark.hl {
 .nerfguard-term .xterm-viewport {
   background-color: var(--term-bg) !important;
 }
+
+.nerfguard-command {
+  margin: 8px 0 12px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  background: var(--chip-bg);
+  font: 12px 'SF Mono', Menlo, monospace;
+  white-space: pre-wrap;
+  user-select: text;
+}
