@@ -1,0 +1,75 @@
+{
+  "name": "session-desk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Claude Code sessions grouped with Linear tickets and PRs",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "postinstall": "electron-rebuild -f -w node-pty",
+    "dist": "electron-vite build && electron-builder --mac --dir",
+    "install-app": "npm run dist && node scripts/install-app.mjs",
+    "test": "vitest run",
+    "hooks": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/install-hooks.mjs"
+  },
+  "dependencies": {
+    "node-pty": "^1.1.0"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.2.1",
+    "@types/node": "^26.6.4",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "typescript": "^7.0.2",
+    "vite": "^7.3.7",
+    "vitest": "^5.0.3"
+  },
+  "productName": "Session Desk",
+  "author": "Mario Bragg",
+  "build": {
+    "appId": "app.session-desk",
+    "productName": "Session Desk",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "out/**",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/node-pty/**"
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dir",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "build/icon.icns",
+      "category": "public.app-category.developer-tools",
+      "identity": "-",
+      "hardenedRuntime": false
+    },
+    "extraResources": [
+      {
+        "from": "hooks/status-hook.sh",
+        "to": "status-hook.sh"
+      }
+    ]
+  }
+}

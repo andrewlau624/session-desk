@@ -1,0 +1,1916 @@
+:root {
+  --bg: #f7f7f5;
+  --sidebar-bg: #f7f7f5;
+  --surface: #ffffff;
+  --border: #e2e2dd;
+  --text: #1f1f1d;
+  --text-muted: #6b6b66;
+  --accent: #c96442;
+  --accent-text: #ffffff;
+  --hover: rgba(0, 0, 0, 0.045);
+  --active: rgba(0, 0, 0, 0.08);
+  --chip-bg: #e6e6e1;
+  --pr-bg: #e3ecf7;
+  --pr-text: #2a5a92;
+  --running: #3f9b5b;
+  --elsewhere: #d69a2d;
+  --term-bg: #ffffff;
+  --term-fg: #1f1f1d;
+  --term-selection: rgba(201, 100, 66, 0.25);
+  --column-bg: #efefec;
+  --drop-bg: #f6e5de;
+  --danger: #b4412d;
+  --danger-bg: #fbeae6;
+  --merged-bg: #ece4f7;
+  --merged-text: #6a3fa8;
+  --open-bg: #e2f2e6;
+  --open-text: #2b7a43;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1d1d1b;
+    --sidebar-bg: #1d1d1b;
+    --surface: #252523;
+    --border: #34342f;
+    --text: #ececea;
+    --text-muted: #9a9a94;
+    --hover: rgba(255, 255, 255, 0.05);
+    --active: rgba(255, 255, 255, 0.09);
+    --chip-bg: #34342f;
+    --pr-bg: #1f3149;
+    --pr-text: #9cc2ef;
+    --term-bg: #1d1d1b;
+    --term-fg: #ececea;
+    --term-selection: rgba(201, 100, 66, 0.35);
+    --column-bg: #222220;
+    --drop-bg: #3a2a23;
+    --danger: #f08a73;
+    --danger-bg: #3a221d;
+    --merged-bg: #2e2440;
+    --merged-text: #c2a6ec;
+    --open-bg: #1f3426;
+    --open-text: #8fd3a4;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.4 -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.app {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  height: 100%;
+}
+
+/* Sidebar — mirrors the Claude desktop sidebar: toolbar on the traffic-light
+   row, icon + label nav rows, a section header, single-line session rows,
+   account row pinned to the bottom. */
+
+.sidebar {
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.sidebar-toolbar,
+.topbar {
+  height: 52px;
+  flex: none;
+  -webkit-app-region: drag;
+}
+
+.sidebar-toolbar {
+  display: flex;
+  align-items: center;
+  /* Clears the traffic lights (positioned in main/index.ts). */
+  padding-left: 84px;
+}
+
+.icon-button {
+  -webkit-app-region: no-drag;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.icon-button:hover,
+.icon-button.on {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px 8px 0;
+}
+
+.nav-row,
+.session-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  text-align: left;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.nav-row {
+  height: 32px;
+  padding: 0 10px;
+}
+
+.nav-row svg {
+  color: var(--text-muted);
+  flex: none;
+}
+
+.nav-row:hover,
+.session-row:hover {
+  background: var(--hover);
+}
+
+.nav-row.active,
+.session-row.active {
+  background: var(--active);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20px;
+  padding: 0 12px 4px 18px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.section-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.filter {
+  margin: 2px 8px 6px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: 13px -apple-system, BlinkMacSystemFont, sans-serif;
+  outline: none;
+}
+
+.filter:focus {
+  border-color: var(--accent);
+}
+
+.session-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 12px;
+}
+
+.session-list-group {
+  list-style: none;
+  margin: 0;
+  padding: 0 8px;
+}
+
+.session-row {
+  height: 30px;
+  padding: 0 10px;
+}
+
+.session-name {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.session-ticket {
+  flex: none;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hollow circle at rest, filled while a process has the session open. */
+.status {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  border: 1.3px solid var(--text-muted);
+  opacity: 0.6;
+}
+
+.status-running {
+  border-color: var(--running);
+  background: var(--running);
+  opacity: 1;
+}
+
+.status-elsewhere {
+  border-color: var(--elsewhere);
+  background: var(--elsewhere);
+  opacity: 1;
+}
+
+.account-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 12px 18px 14px;
+  border: none;
+  border-top: 1px solid var(--border);
+  background: none;
+  text-align: left;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.account-row:hover {
+  background: var(--hover);
+}
+
+.account-row > svg {
+  margin-left: auto;
+  color: var(--text-muted);
+}
+
+.avatar {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--chip-bg);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.avatar-empty {
+  background: none;
+  border: 1px dashed var(--text-muted);
+  color: var(--text-muted);
+}
+
+.account-org {
+  color: var(--text-muted);
+}
+
+/* Shared controls */
+
+.btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 7px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: var(--hover);
+}
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+  font-weight: 500;
+}
+
+.btn-primary:hover {
+  background: var(--accent);
+  filter: brightness(1.06);
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.dot-running {
+  background: var(--running);
+}
+
+.empty {
+  color: var(--text-muted);
+  margin: 0;
+  padding: 6px 10px;
+}
+
+/* Main */
+
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Same 52px row as the sidebar toolbar; draggable like a native title bar. */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px 0 24px;
+  min-width: 0;
+}
+
+.topbar-title {
+  margin: 0;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.folder-chip {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--chip-bg);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.topbar-actions {
+  -webkit-app-region: no-drag;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.topbar-meta {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.icon-button:disabled {
+  cursor: default;
+}
+
+.icon-button.spinning svg {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.session-header {
+  padding: 2px 24px 12px;
+  flex: none;
+}
+
+/* Dragged to a height: the panels fill it and scroll. */
+.session-header.sized {
+  box-sizing: border-box;
+  /* A height saved in a taller window gives way rather than the terminal. */
+  flex: 0 1 auto;
+  min-height: 64px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.session-header.sized .panels {
+  flex: 1;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.session-header.sized .panel {
+  overflow-y: auto;
+  max-height: none;
+}
+
+/* A 1px rule with a taller grab area around it. */
+.row-resizer {
+  flex: none;
+  height: 7px;
+  margin: -3px 0;
+  position: relative;
+  z-index: 2;
+  cursor: row-resize;
+  touch-action: none;
+}
+
+.row-resizer::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 3px;
+  height: 1px;
+  background: var(--border);
+}
+
+.row-resizer:hover::after,
+.row-resizer:active::after {
+  height: 2px;
+  top: 2.5px;
+  background: var(--accent);
+}
+
+.panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 10px 14px;
+  min-width: 0;
+}
+
+.panel h2 {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin: 0 0 6px;
+}
+
+.panel .empty {
+  padding: 0;
+}
+
+.link-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+.link-list .secondary a {
+  color: var(--text-muted);
+}
+
+.hint {
+  margin-left: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.notice {
+  margin: 16px 24px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--elsewhere);
+  border-radius: 9px;
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.notice p {
+  margin: 0;
+  flex: 1;
+}
+
+.term-stack {
+  flex: 1;
+  /* Matches MIN_TERMINAL in SessionHeader: the panels shrink before this does. */
+  min-height: 160px;
+  position: relative;
+  background: var(--term-bg);
+}
+
+.term-host {
+  flex: 1;
+  min-height: 0;
+  padding: 8px 0 0 12px;
+}
+
+/* xterm paints its viewport black by default, which shows through the padding. */
+.term-host .xterm-viewport {
+  background-color: var(--term-bg) !important;
+}
+
+.term-overlay {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.placeholder {
+  padding: 24px;
+}
+
+.placeholder h1 {
+  font-size: 17px;
+  margin: 0 0 6px;
+}
+
+.placeholder p {
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.btn-small {
+  padding: 3px 9px;
+  font-size: 12px;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.link-button {
+  margin-left: 8px;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+
+.dot-off {
+  background: var(--text-muted);
+  opacity: 0.5;
+}
+
+.sidebar-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 10px 10px;
+  padding: 8px 10px;
+  border: none;
+  border-top: 1px solid var(--border);
+  background: none;
+  text-align: left;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 0 0 7px 7px;
+}
+
+.sidebar-footer:hover {
+  color: var(--text);
+}
+
+/* PRs and tickets */
+
+.pr-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.pr-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pr-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pr-line a {
+  flex: none;
+}
+
+.pr-title {
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pr-badge {
+  flex: none;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 4px;
+  padding: 0 5px;
+  background: var(--chip-bg);
+  color: var(--text-muted);
+}
+
+.pr-open {
+  background: var(--open-bg);
+  color: var(--open-text);
+}
+
+.pr-merged {
+  background: var(--merged-bg);
+  color: var(--merged-text);
+}
+
+.ticket-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.state-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+}
+
+/* The ticket's branch: repo, name, state. Wraps on narrow panels. */
+.ticket-branch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  margin-top: 4px;
+  font-size: 12px;
+  min-width: 0;
+}
+
+.branch-repo,
+.branch-state {
+  color: var(--text-muted);
+}
+
+.branch-action {
+  margin-left: 0;
+  font-size: inherit;
+}
+
+.branch-action:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.branch-name {
+  font-family: 'SF Mono', Menlo, monospace;
+  font-size: 11.5px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ticket-title {
+  margin-top: 3px;
+}
+
+.ticket-others {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.ticket-others a {
+  margin-right: 8px;
+}
+
+.link-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.link-form input,
+.key-input {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: 12px 'SF Mono', Menlo, monospace;
+  outline: none;
+}
+
+.link-form input {
+  width: 120px;
+}
+
+.link-form input:focus,
+.key-input:focus {
+  border-color: var(--accent);
+}
+
+.form-error {
+  width: 100%;
+  color: var(--danger);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* Workflow board */
+
+.board-view {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.banner-error {
+  margin: 0 24px 10px;
+  padding: 8px 12px;
+  border-radius: 7px;
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.board-empty {
+  padding: 0 24px;
+}
+
+.board {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(200px, 1fr));
+  gap: 12px;
+  padding: 4px 24px 24px;
+  overflow-x: auto;
+}
+
+.column {
+  background: var(--column-bg);
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px dashed transparent;
+}
+
+.column.drag-over {
+  background: var(--drop-bg);
+  border-color: var(--accent);
+}
+
+.column h2 {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 2px 4px 10px;
+}
+
+.count {
+  color: var(--text-muted);
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  min-height: 40px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 11px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+
+.card:hover {
+  border-color: var(--accent);
+}
+
+.card:active {
+  cursor: grabbing;
+}
+
+.card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-id {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.card-title {
+  margin: 4px 0 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-prs {
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0;
+  font-size: 12px;
+}
+
+.card-prs li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Keep "repo#123" on one line; truncate rather than break mid-name. */
+.card-prs a {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* PRs attached for context: muted, no chip, so a merged one can't read as "fixed". */
+.card-related {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: -2px 0 6px;
+}
+
+.card-related a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--border);
+}
+
+.pr-list li.pr-related a,
+.pr-list li.pr-related .pr-title {
+  color: var(--text-muted);
+}
+
+.card-foot {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Modal */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.modal {
+  width: min(460px, calc(100% - 32px));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 22px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+}
+
+.modal h1 {
+  font-size: 16px;
+  margin: 0 0 8px;
+}
+
+.modal p {
+  margin: 0 0 12px;
+  color: var(--text-muted);
+}
+
+.key-input {
+  width: 100%;
+  padding: 7px 10px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.placeholder .btn {
+  margin-top: 12px;
+}
+
+/* Session title menu (top bar) */
+
+.title-menu {
+  position: relative;
+  min-width: 0;
+  /* Pulls the button's hover background out to the left edge. On the flex item,
+     not the button, or the button loses that width from its own content. */
+  margin-left: -8px;
+  -webkit-app-region: no-drag;
+}
+
+.title-button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 4px 6px 4px 8px;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  cursor: pointer;
+}
+
+.title-button svg {
+  flex: none;
+  color: var(--text-muted);
+}
+
+.title-button:hover,
+.title-button.open {
+  background: var(--hover);
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  min-width: 240px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
+}
+
+.menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 30px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  text-align: left;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.menu-item:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.menu-item:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.menu-hint {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.menu-divider {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--border);
+}
+
+.title-rename {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 0 1 480px;
+  -webkit-app-region: no-drag;
+}
+
+.title-rename input {
+  width: 100%;
+  padding: 4px 8px;
+  margin-left: -8px;
+  border-radius: 7px;
+  border: 1px solid var(--accent);
+  background: var(--surface);
+  color: var(--text);
+  font: 600 15px -apple-system, BlinkMacSystemFont, sans-serif;
+  outline: none;
+}
+
+/* Transient status line */
+
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: calc(50% + 140px);
+  transform: translateX(-50%);
+  z-index: 30;
+  max-width: 560px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 13px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+}
+
+.toast-error {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+/* Archived group at the end of the session list */
+
+.archived-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  margin-top: 8px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.archived-toggle:hover {
+  background: var(--hover);
+}
+
+.disclosure {
+  display: inline-flex;
+  transform: rotate(-90deg);
+  transition: transform 0.12s;
+}
+
+.disclosure.open {
+  transform: none;
+}
+
+.session-row.archived .session-name {
+  color: var(--text-muted);
+}
+
+/* Groups */
+
+.group + .group .section-header {
+  margin-top: 12px;
+}
+
+.section-header[data-drop='over'] {
+  background: var(--drop-bg);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  border-radius: 8px;
+}
+
+.group-header {
+  padding-left: 10px;
+}
+
+.group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+  padding: 2px 0;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.group-toggle:hover {
+  color: var(--text);
+}
+
+.group-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.group-empty {
+  padding: 4px 10px 4px 28px;
+  font-size: 12px;
+}
+
+/* Row "…" control: present for layout, shown on hover like the native sidebar. */
+
+.row-more {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  opacity: 0;
+}
+
+/* In session rows the button overlays the right edge, so it takes no width
+   from the title until hover, where it stands in for the ticket number. */
+.session-row {
+  position: relative;
+}
+
+.session-row .row-more {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+}
+
+.session-row:hover .session-name,
+.session-row.menu-open .session-name {
+  padding-right: 20px;
+}
+
+.session-row:hover .row-more,
+.session-row:focus-within .row-more,
+.session-row.menu-open .row-more,
+.group-header:hover .row-more,
+.row-more[aria-expanded='true'] {
+  opacity: 1;
+}
+
+.session-row:hover .session-ticket,
+.session-row.menu-open .session-ticket {
+  display: none;
+}
+
+.session-row.menu-open {
+  background: var(--hover);
+}
+
+.row-rename,
+.group-rename {
+  flex: 1;
+  min-width: 0;
+}
+
+.row-rename input {
+  width: 100%;
+  padding: 2px 6px;
+  margin-left: -6px;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: var(--surface);
+  color: var(--text);
+  font: 14px -apple-system, BlinkMacSystemFont, sans-serif;
+  outline: none;
+}
+
+.group-rename input {
+  font-size: 13px;
+}
+
+/* Popup menu (portal) */
+
+.menu-popup {
+  position: fixed;
+}
+
+.menu-danger {
+  color: var(--danger);
+}
+
+.menu-back {
+  color: var(--text-muted);
+}
+
+.menu-input {
+  padding: 4px;
+}
+
+.menu-input input {
+  width: 100%;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: 13px -apple-system, BlinkMacSystemFont, sans-serif;
+  outline: none;
+}
+
+.menu-input input:focus {
+  border-color: var(--accent);
+}
+
+.btn-danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+  font-weight: 500;
+}
+
+.btn-danger:hover {
+  background: var(--danger);
+  filter: brightness(1.06);
+}
+
+/* Activity from the Claude Code hooks */
+
+.status-working {
+  border: 1.5px solid var(--accent);
+  border-right-color: transparent;
+  background: none;
+  opacity: 1;
+  animation: spin 0.9s linear infinite;
+}
+
+.status-waiting {
+  border-color: var(--accent);
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  opacity: 1;
+}
+
+/* Worktrees view */
+
+.worktrees-view {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 24px 12px;
+  flex-wrap: wrap;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.filter-chip.on {
+  border-color: var(--accent);
+  background: var(--drop-bg);
+}
+
+.wt-empty {
+  padding: 8px 24px;
+}
+
+.wt-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 24px 24px;
+}
+
+.wt-repo h2 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 14px 0 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.wt-table {
+  width: 100%;
+  /* Fixed widths line the columns up across every repo's table. */
+  table-layout: fixed;
+  border-collapse: collapse;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  overflow: hidden;
+  font-size: 13px;
+}
+
+.wt-table td {
+  padding: 7px 10px;
+  border-top: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.wt-table tr:first-child td {
+  border-top: none;
+}
+
+.wt-verdict {
+  width: 28px;
+  padding-right: 0 !important;
+}
+
+.wt-path {
+  width: 34%;
+}
+
+.wt-links {
+  width: 20%;
+}
+
+.wt-time {
+  width: 72px;
+}
+
+.wt-action {
+  width: 104px;
+}
+
+.wt-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.wt-dot-safe {
+  background: var(--running);
+}
+
+.wt-dot-active {
+  background: var(--pr-text);
+}
+
+.wt-dot-blocked {
+  background: var(--elsewhere);
+}
+
+.wt-dot-missing {
+  border: 1.3px dashed var(--text-muted);
+}
+
+.wt-path {
+  font-family: 'SF Mono', Menlo, monospace;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wt-branch {
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--text-muted);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wt-links a {
+  margin-right: 10px;
+  white-space: nowrap;
+}
+
+.wt-links .pr-badge {
+  margin-left: 4px;
+}
+
+.wt-reason {
+  color: var(--text-muted);
+}
+
+.wt-blocked .wt-reason {
+  color: var(--text);
+}
+
+.wt-time {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.wt-action {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.wt-reason,
+.wt-links {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modal-wide {
+  width: min(640px, calc(100% - 32px));
+}
+
+.modal .warn {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  background: var(--danger-bg);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.modal code {
+  font: 12px 'SF Mono', Menlo, monospace;
+}
+
+.wt-confirm-list {
+  max-height: 220px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 8px 12px 8px 26px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font: 12px 'SF Mono', Menlo, monospace;
+}
+
+/* PR checks, reviews and Greptile */
+
+.pr-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  font-size: 12px;
+}
+
+.pr-status.compact {
+  display: inline-flex;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.tone-ok {
+  color: var(--open-text);
+}
+
+.tone-bad {
+  color: var(--danger);
+}
+
+.tone-warn {
+  color: var(--elsewhere);
+}
+
+.tone-muted {
+  color: var(--text-muted);
+}
+
+.pr-status .link-button {
+  margin-left: 0;
+  font-size: 12px;
+}
+
+.card-prs li {
+  flex-wrap: wrap;
+}
+
+/* Keep the terminal its space however many PRs a session opened. */
+.pr-panel {
+  max-height: 34vh;
+  overflow-y: auto;
+}
+
+/* "via ticket" and the card's ticket: short labels that never wrap. */
+.pr-origin {
+  flex: none;
+  white-space: nowrap;
+}
+
+/* The board card's PR, in a session about another ticket. */
+.pr-list li.pr-focus {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  box-shadow: inset 2px 0 0 var(--accent);
+  border-radius: 4px;
+  margin: 0 -8px;
+  padding: 2px 8px;
+}
+
+.pr-more {
+  margin-left: 0;
+  font-size: 12px;
+}
+
+/* Ticket context: evidence folders and memory notes */
+
+.ticket-context {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.context-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 3px 6px;
+  margin: 0 -6px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.context-row:hover {
+  background: var(--hover);
+}
+
+.context-row svg {
+  flex: none;
+  color: var(--text-muted);
+}
+
+.context-name {
+  flex: none;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.context-desc {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.context-more {
+  margin: 2px 0 0;
+  align-self: flex-start;
+  font-size: 12px;
+}
+
+/* ⌘K palette */
+
+.palette-backdrop {
+  align-items: flex-start;
+  padding-top: 12vh;
+}
+
+.palette {
+  width: min(640px, calc(100% - 32px));
+  max-height: 64vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+}
+
+.palette-input {
+  padding: 14px 16px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  color: var(--text);
+  font: 15px -apple-system, BlinkMacSystemFont, sans-serif;
+  outline: none;
+}
+
+.palette-list {
+  overflow-y: auto;
+  padding: 4px 6px 8px;
+}
+
+.palette-section {
+  padding: 8px 10px 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.palette-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.palette-item.selected {
+  background: var(--active);
+}
+
+.palette-title {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.palette-meta,
+.palette-snippet {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.palette-role {
+  font-weight: 600;
+}
+
+.palette-empty {
+  padding: 18px 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.palette-foot {
+  padding: 7px 14px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+mark.hl {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: inherit;
+  border-radius: 3px;
+}
+
+/* Artifacts view */
+
+.artifacts-view {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 24px 24px;
+}
+
+.artifact-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.artifact {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 10px 14px;
+}
+
+.artifact-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.artifact-title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.artifact-when {
+  margin-left: auto;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.artifact-open {
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.artifact-desc {
+  margin-top: 3px;
+  color: var(--text-muted);
+}
+
+.artifact-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.artifact-links .chip {
+  text-decoration: none;
+}
+
+.artifact-session {
+  margin-left: 0;
+  font-size: 12px;
+}
+
+.artifact-session:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.chip {
+  background: var(--chip-bg);
+  border-radius: 4px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.artifact-more {
+  flex: none;
+  width: 22px;
+  height: 22px;
+}
+
+.artifact.removed {
+  opacity: 0.55;
+}
+
+.artifacts-removed {
+  margin: 12px 0 0;
+  font-size: 12px;
+}
+
+/* Settings */
+
+.settings .setting {
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+
+.setting-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.setting-value {
+  margin-top: 4px;
+  font: 13px 'SF Mono', Menlo, monospace;
+  word-break: break-all;
+}
+
+.settings .setting-hint {
+  margin: 4px 0 0;
+  font-size: 12px;
+}
+
+.project-config-summary {
+  margin: 2px 0 8px;
+  padding-left: 18px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.warn-text {
+  color: var(--elsewhere) !important;
+}
+
+.setting-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.onboarding {
+  padding: 40px 24px;
+  max-width: 560px;
+}
+
+.onboarding h1 {
+  font-size: 18px;
+  margin: 0 0 8px;
+}
+
+.onboarding p {
+  color: var(--text-muted);
+  margin: 0 0 14px;
+}
+
+.setting-value-plain {
+  margin-top: 4px;
+}
+
+.modal pre.diff {
+  max-height: 280px;
+  overflow: auto;
+  margin: 0 0 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg);
+  font: 11.5px/1.45 'SF Mono', Menlo, monospace;
+  white-space: pre;
+}
+
+.hook-nudge {
+  margin: 0 24px 10px;
+  padding: 8px 12px;
+  border-radius: 7px;
+  background: var(--drop-bg);
+  font-size: 13px;
+}
