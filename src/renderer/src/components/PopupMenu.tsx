@@ -17,6 +17,10 @@ export type MenuEntry =
       input?: { placeholder: string; onSubmit: (value: string) => void }
       /** Marks the current choice in a list of options. */
       checked?: boolean
+      /** A short label on the right (e.g. "Recommended"). */
+      hint?: string
+      /** Shown on hover. */
+      title?: string
     }
 
 interface Props {
@@ -94,6 +98,7 @@ export function PopupMenu({ anchor, entries, onClose, align = 'left' }: Props) {
             role="menuitem"
             className={`menu-item ${entry.danger ? 'menu-danger' : ''}`}
             disabled={!!entry.disabled}
+            title={entry.title}
             onClick={() => {
               if (entry.submenu) setStack((s) => [...s, { title: entry.label, entries: entry.submenu! }])
               else {
@@ -104,8 +109,10 @@ export function PopupMenu({ anchor, entries, onClose, align = 'left' }: Props) {
           >
             {entry.checked !== undefined && <span className="menu-check">{entry.checked ? '✓' : ''}</span>}
             {entry.label}
-            {entry.disabled ? (
+            {entry.disabled && entry.disabled.trim() ? (
               <span className="menu-hint">{entry.disabled}</span>
+            ) : entry.hint ? (
+              <span className="menu-hint">{entry.hint}</span>
             ) : entry.submenu ? (
               <span className="menu-hint">›</span>
             ) : null}

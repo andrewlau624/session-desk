@@ -259,24 +259,51 @@ export async function listWorktrees(workspace: string): Promise<WorktreeInfo[]> 
 
 /**
  * The checkouts working on a ticket: any worktree (or main checkout) whose
- * branch names it, or whose folder does (`<repo>-wt/eng-1234`). Local git
- * only, no GitHub calls, so the session view can ask on every refresh.
+ * branch names it, or whose folder does (`<repo>-wt/eng-1234`), or that is on
+ * one of the ticket's PR branches (`prHeads`, by repo slug) or tracks one:
+ * a PR taken over from someone else rarely names the ticket. Local git only,
+ * no GitHub calls, so the session view can ask on every refresh.
  */
-export async function ticketBranches(workspace: string, ticket: string): Promise<TicketBranch[]> {
+export async function ticketBranches(
+  workspace: string,
+  ticket: string,
+  prHeads: { repo: string; branch: string }[] = []
+): Promise<TicketBranch[]> {
   const repos = await reposIn(workspace)
   const found = await mapLimit(repos, CONCURRENCY, async (repo) => {
-    const list = await git(repo, 'worktree', 'list', '--porcelain')
-    return parsePorcelain(list.out)
-      .filter((w) => w.branch && !w.prunable && (ticketsIn(w.branch)[0] ?? ticketsIn(relative(repo, w.path))[0] ?? ticketsIn(w.path)[0]) === ticket)
-      .map((w) => ({ repo, w }))
-  })
-  return mapLimit(found.flat(), CONCURRENCY, async ({ repo, w }) => {
-    const branch = w.branch!
-    const [remote, head, status, upstream] = await Promise.all([
+    const [list, remote, refs] = await Promise.all([
+      git(repo, 'worktree', 'list', '--porcelain'),
       git(repo, 'remote', 'get-url', 'origin'),
+      // Every local branch and what it tracks, in one call.
+      git(repo, 'for-each-ref', '--format=%(refname:short) %(upstream:short)', 'refs/heads')
+    ])
+    const slug = /github\.com[:/]([\w.-]+\/[\w.-]+?)(\.git)?$/.exec(remote.out.trim())?.[1] ?? null
+    const upstreams = new Map(
+      refs.out
+        .split('\n')
+        .filter(Boolean)
+        .map((l) => l.split(' ') as [string, string?])
+        .filter(([, u]) => u?.startsWith('origin/'))
+        .map(([b, u]) => [b, u!.slice('origin/'.length)])
+    )
+    const heads = new Set(prHeads.filter((h) => slug && h.repo.toLowerCase() === slug.toLowerCase()).map((h) => h.branch))
+    return parsePorcelain(list.out)
+      .filter((w) => {
+        if (!w.branch || w.prunable) return false
+        const named = (ticketsIn(w.branch)[0] ?? ticketsIn(relative(repo, w.path))[0] ?? ticketsIn(w.path)[0]) === ticket
+        const upstream = upstreams.get(w.branch)
+        return named || heads.has(w.branch) || (!!upstream && heads.has(upstream))
+      })
+      .map((w) => ({ repo, slug, w, upstream: upstreams.get(w.branch!) ?? null }))
+  })
+  return mapLimit(found.flat(), CONCURRENCY, async ({ repo, slug, w, upstream }) => {
+    const branch = w.branch!
+    // Its upstream if set, else a same-named branch on origin.
+    const remoteName = upstream ?? branch
+    const [head, status, onOrigin] = await Promise.all([
       git(repo, 'symbolic-ref', '--short', 'refs/remotes/origin/HEAD'),
       git(w.path, 'status', '--porcelain', '--untracked-files=normal'),
-      git(w.path, 'rev-parse', '--verify', '--quiet', `refs/remotes/origin/${branch}`)
+      git(w.path, 'rev-parse', '--verify', '--quiet', `refs/remotes/origin/${remoteName}`)
     ])
     const defaultRef = head.ok ? head.out.trim() : 'origin/main'
     const ahead = await aheadOf(w.path, defaultRef)
@@ -284,10 +311,11 @@ export async function ticketBranches(workspace: string, ticket: string): Promise
       repo: repoName(workspace, repo),
       branch,
       label: worktreeLabel(repo, w.path),
-      slug: /github\.com[:/]([\w.-]+\/[\w.-]+?)(\.git)?$/.exec(remote.out.trim())?.[1] ?? null,
+      slug,
       defaultBranch: defaultRef.replace(/^origin\//, ''),
-      pushed: upstream.ok,
-      unpushed: upstream.ok ? await aheadOf(w.path, `refs/remotes/origin/${branch}`) : ahead,
+      pushed: onOrigin.ok,
+      remoteBranch: onOrigin.ok && remoteName !== branch ? remoteName : null,
+      unpushed: onOrigin.ok ? await aheadOf(w.path, `refs/remotes/origin/${remoteName}`) : ahead,
       ahead,
       changes: status.ok ? status.out.split('\n').filter(Boolean).length : 0
     }

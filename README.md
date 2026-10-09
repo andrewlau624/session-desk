@@ -178,6 +178,12 @@ Moves go forward only, never touch In Review, Done or Canceled tickets, happen a
 
 App state (links, Waiting overlay, encrypted key) is in `~/Library/Application Support/session-desk/session-desk.json`.
 
+## Model and effort
+
+Under the terminal, two buttons show the session's model and effort (from Claude's latest reply) and change them for that session only: the app saves the choice and restarts its Claude with `--model`/`--effort`, so your defaults for new sessions never change (typing `/model` or `/effort` would change them). If your default model has the 1M context (`opus[1m]`), picking another version of that family keeps it. The buttons are disabled, with the reason, while Claude is working, a question or permission prompt is open, or the session is open in another app.
+
+The list comes from the model catalog Claude Code caches for your account (`~/.claude/cache/model-catalog`, refreshed about hourly), so new models appear without an app update: main models first, older ones under More models, each with its own effort levels and badges. Models newer than your installed Claude Code are left out. If the catalog can't be read, a built-in list is used.
+
 ## Sidebar
 
 Each session row has a `…` menu on hover (or right-click): Rename, Move to group, Archive, Delete. The title-bar menu has the same items plus Stop, Open in Terminal, copy commands and Show transcript.

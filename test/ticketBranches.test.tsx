@@ -19,6 +19,7 @@ const b = (over: Partial<TicketBranch> = {}): TicketBranch => ({
   slug: 'acme/api',
   defaultBranch: 'main',
   pushed: true,
+  remoteBranch: null,
   unpushed: 0,
   ahead: 1,
   changes: 0,
@@ -98,11 +99,56 @@ describe('ticketBranches (real git)', () => {
         slug: null,
         defaultBranch: 'main',
         pushed: true,
+        remoteBranch: null,
         unpushed: 1,
         ahead: 2,
         changes: 1
       }
     ])
     expect(await ticketBranches(ws, 'ENG-2222')).toEqual([])
+  })
+})
+
+describe("a PR taken over from someone else (real git)", () => {
+  it("is found through the ticket's PR branch, and its push state comes from its upstream", async () => {
+    // Someone else's PR on feat/importer; picked up in api-wt-8655 as me/importer-update tracking it.
+    const root = realpathSync(tmp())
+    const ws = join(root, 'ws')
+    mkdirSync(ws)
+    git(root, 'init', '-q', '--bare', 'remote.git')
+    git(ws, 'init', '-q', 'api')
+    const repo = join(ws, 'api')
+    writeFileSync(join(repo, 'README.md'), 'hi\n')
+    git(repo, 'add', '-A')
+    git(repo, 'commit', '-qm', 'init')
+    git(repo, 'remote', 'add', 'origin', join(root, 'remote.git'))
+    git(repo, 'push', '-q', '-u', 'origin', 'main')
+    git(repo, 'remote', 'set-head', 'origin', 'main')
+    git(repo, 'branch', '-q', 'feat/importer')
+    git(repo, 'push', '-q', 'origin', 'feat/importer')
+    git(repo, 'fetch', '-q', 'origin')
+    const wt = join(ws, 'api-wt-8655')
+    git(repo, 'worktree', 'add', '-q', '--track', '-b', 'me/importer-update', wt, 'origin/feat/importer')
+    // Another checkout tracking something else: not this ticket's.
+    git(repo, 'worktree', 'add', '-q', '-b', 'me/other', join(ws, 'api-wt-other'), 'origin/main')
+    // Make origin look like GitHub, so the PR's repo can be matched (refs are already local).
+    git(repo, 'remote', 'set-url', 'origin', 'https://github.com/acme/api.git')
+
+    const heads = [{ repo: 'acme/api', branch: 'feat/importer' }]
+    expect(await ticketBranches(ws, 'ENG-8372')).toEqual([])
+    const found = await ticketBranches(ws, 'ENG-8372', heads)
+    expect(found).toMatchObject([{ repo: 'api', branch: 'me/importer-update', remoteBranch: 'feat/importer', label: 'api-wt-8655', pushed: true, unpushed: 0 }])
+    // A PR in another repo doesn't match.
+    expect(await ticketBranches(ws, 'ENG-8372', [{ repo: 'acme/web', branch: 'feat/importer' }])).toEqual([])
+  })
+
+  it('the line shows local → remote, links the remote branch, and names the PR', () => {
+    const html = renderToStaticMarkup(
+      <BranchLine branch={b({ branch: 'me/importer-update', remoteBranch: 'feat/importer' })} pr={{ repo: 'acme/api', number: 8655, url: 'u' }} />
+    )
+    expect(html).toContain('me/importer-update')
+    expect(html).toContain('→ feat/importer')
+    expect(html).toContain(`https://github.com/${b().slug}/tree/feat/importer`)
+    expect(html).toContain('PR #8655')
   })
 })

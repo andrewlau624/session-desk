@@ -260,7 +260,11 @@ function TicketPanel({
   openPrBlocked: string | null
 }) {
   const primary = session.tickets[0]
-  const branches = useTicketBranches(primary)
+  // The ticket's own PRs: their branches find a taken-over PR's checkout, whose names say nothing of the ticket.
+  const branches = useTicketBranches(
+    primary,
+    prs.flatMap((p) => (!p.related && p.info?.headRef ? [{ repo: p.repo, branch: p.info.headRef }] : []))
+  )
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -338,7 +342,7 @@ function TicketPanel({
             <BranchLine
               key={`${b.repo}:${b.branch}`}
               branch={b}
-              pr={prs.find((p) => !p.related && p.info?.headRef === b.branch && p.repo === b.slug)}
+              pr={prs.find((p) => !p.related && p.info?.headRef === (b.remoteBranch ?? b.branch) && p.repo === b.slug)}
               onOpenPr={onOpenPr && (() => onOpenPr(b))}
               blocked={openPrBlocked}
             />
@@ -359,15 +363,17 @@ function TicketPanel({
 }
 
 /** The ticket's branches, re-read when sessions change (a commit or push shows up mid-turn). */
-function useTicketBranches(ticket: string | undefined): TicketBranch[] {
+function useTicketBranches(ticket: string | undefined, prHeads: { repo: string; branch: string }[]): TicketBranch[] {
   const [branches, setBranches] = useState<TicketBranch[]>([])
+  // A new array every render: key the effect on its contents.
+  const headsKey = prHeads.map((h) => `${h.repo}:${h.branch}`).join(',')
   useEffect(() => {
     setBranches([])
     if (!ticket) return
     let live = true
     const load = () =>
       window.desk
-        .ticketBranches(ticket)
+        .ticketBranches(ticket, prHeads)
         .then((b) => live && setBranches(b))
         .catch(() => {})
     void load()
@@ -376,7 +382,8 @@ function useTicketBranches(ticket: string | undefined): TicketBranch[] {
       live = false
       off()
     }
-  }, [ticket])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ticket, headsKey])
   return branches
 }
 
@@ -416,8 +423,9 @@ export function BranchLine({
     <div className="ticket-branch" title={b.label}>
       <span className="branch-repo">{b.repo}</span>
       {onGitHub ? (
-        <ExternalLink href={`https://github.com/${b.slug}/tree/${encodeURI(b.branch)}`} className="branch-name">
+        <ExternalLink href={`https://github.com/${b.slug}/tree/${encodeURI(b.remoteBranch ?? b.branch)}`} className="branch-name">
           {b.branch}
+          {b.remoteBranch && ` → ${b.remoteBranch}`}
         </ExternalLink>
       ) : (
         <code className="branch-name">{b.branch}</code>

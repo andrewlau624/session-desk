@@ -117,20 +117,54 @@ export interface SessionSummary {
 
 /** A session's own model and effort, passed as --model/--effort, so your defaults never change. */
 export interface SessionLaunch {
-  /** A Claude Code alias: opus, opus[1m], sonnet, sonnet[1m], haiku, fable. */
+  /** A model ID from MODEL_CHOICES, e.g. claude-opus-5-5 (the 1M context is added at launch when your default uses it). */
   model?: string
   effort?: string
   /** When it was chosen (ms): replies after this reflect it. */
   at: number
 }
 
+/** A model as Claude Code's catalog describes it (see src/main/modelCatalog.ts). */
+export interface CatalogModel {
+  id: string
+  name: string
+  /** main: the short list; overflow: under More models. */
+  section: 'main' | 'overflow'
+  /** Its effort levels, nearest the top first; null when it has none. */
+  efforts: { id: string; name: string; badge?: string }[] | null
+  /** A warning to show with it (e.g. usage). */
+  notice?: string
+  /** The oldest Claude Code that runs it. */
+  minVersion?: string
+}
+
+export interface ModelCatalog {
+  /** claude-code: Claude Code's own cached catalog; built-in: this app's fallback list. */
+  source: 'claude-code' | 'built-in'
+  fetchedAt: number | null
+  models: CatalogModel[]
+}
+
+/**
+ * The fallback list (used when Claude Code's catalog can't be read), as the Claude desktop app lists them: current ones
+ * first, older ones under More models. Every ID was checked against the CLI
+ * (`claude -p --model <id>`) on 2.1.29x.
+ */
 export const MODEL_CHOICES = [
-  { alias: 'opus', label: 'Opus' },
-  { alias: 'opus[1m]', label: 'Opus (1M context)' },
-  { alias: 'sonnet', label: 'Sonnet' },
-  { alias: 'sonnet[1m]', label: 'Sonnet (1M context)' },
-  { alias: 'haiku', label: 'Haiku' },
-  { alias: 'fable', label: 'Fable' }
+  { id: 'claude-opus-5-5', label: 'Opus 5.5' },
+  { id: 'claude-fable-5-1', label: 'Fable 5.1' },
+  { id: 'claude-sonnet-5-5', label: 'Sonnet 5.5' },
+  { id: 'claude-haiku-5-5', label: 'Haiku 5.5' }
+] as const
+export const MORE_MODEL_CHOICES = [
+  { id: 'claude-haiku-4-5', label: 'Haiku 4.5' },
+  { id: 'claude-sonnet-5', label: 'Sonnet 5' },
+  { id: 'claude-opus-5', label: 'Opus 5' },
+  { id: 'claude-fable-5', label: 'Fable 5' },
+  { id: 'claude-opus-4-8', label: 'Opus 4.8' },
+  { id: 'claude-opus-4-7', label: 'Opus 4.7' },
+  { id: 'claude-opus-4-6', label: 'Opus 4.6' },
+  { id: 'claude-sonnet-4-6', label: 'Sonnet 4.6' }
 ] as const
 export const EFFORT_CHOICES = [
   { level: 'low', label: 'Low' },
@@ -204,8 +238,10 @@ export interface TicketBranch {
   slug: string | null
   /** The repo's default branch, e.g. main. */
   defaultBranch: string
-  /** origin has the branch. */
+  /** origin has its upstream (or a branch of the same name). */
   pushed: boolean
+  /** The branch on origin it tracks, when that's named differently (e.g. a PR taken over under a local name). */
+  remoteBranch: string | null
   /** Local commits origin doesn't have yet (all of `ahead` when never pushed); null if it couldn't be told. */
   unpushed: number | null
   /** Commits on the branch that the default branch doesn't have. */
@@ -439,14 +475,19 @@ export interface DeskApi {
   ptyWrite(sessionId: string, data: string): void
   ptyResize(sessionId: string, cols: number, rows: number): void
   ptyKill(sessionId: string): Promise<void>
-  /** Checkouts whose branch or folder names the ticket (local git only). */
-  ticketBranches(ticket: string): Promise<TicketBranch[]>
+  /**
+   * Checkouts working on a ticket (local git only): a branch or folder naming
+   * it, or a checkout of one of its PRs (`prHeads`: their repo and branch).
+   */
+  ticketBranches(ticket: string, prHeads?: { repo: string; branch: string }[]): Promise<TicketBranch[]>
   /** Saves a model and/or effort for this session only (applied the next time it starts). */
   setSessionLaunch(sessionId: string, choice: { model?: string; effort?: string }): Promise<void>
   /** Stops a session's process and resolves once it has exited. */
   ptyStop(sessionId: string): Promise<void>
   /** Opens the session's folder (or the project folder for a new chat) in Finder, Terminal or an editor. */
   openFolder(sessionId: string | null, how: 'finder' | 'terminal' | string): Promise<void>
+  /** The models (and their efforts) Claude Code offers this account. */
+  modelCatalog(): Promise<ModelCatalog>
   /** Code editors installed in /Applications that can open a folder. */
   folderApps(): Promise<string[]>
   /** Sends a kickoff turn to a session open here and idle at its prompt; false if it isn't open. */

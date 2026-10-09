@@ -3,8 +3,10 @@ import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { CONFIG_NAME, loadProjectConfig, projectConfig, projectConfigStatus, starterConfig, watchProjectConfig } from './projectConfig'
+import { defaultModel, withDefaultContext } from './modelChoice'
+import { readModelCatalog } from './modelCatalog'
 import type { Column, Kickoff, LinearStatus, PtyStartRequest, RenameResult, SessionSummary, Settings, TicketBranch } from '../shared/types'
-import { COLUMNS, EFFORT_CHOICES, MODEL_CHOICES } from '../shared/types'
+import { COLUMNS, EFFORT_CHOICES } from '../shared/types'
 import { refreshPrInfo, requestGreptileReview, withInfo } from './github'
 import { Indicators } from './indicators'
 import { fetchBoard, fetchIssue, invalidate, linearStatus, moveIssue, refreshPrTickets, resetLinear } from './linear'
@@ -353,13 +355,17 @@ ipcMain.handle('worktrees:remove', (_e, path: string) => removeWorktree(String(p
 // The session view asks on every sessions change (often, mid-turn); a few
 // seconds' reuse keeps that to a handful of local git calls.
 const branchCache = new Map<string, { at: number; result: Promise<TicketBranch[]> }>()
-ipcMain.handle('worktrees:forTicket', (_e, ticket: string) => {
+ipcMain.handle('worktrees:forTicket', (_e, ticket: string, heads: unknown) => {
   const ws = workspace()
   if (!ws || typeof ticket !== 'string' || !TICKET_RE.test(ticket)) return []
-  const key = `${ws}|${ticket}`
+  // PR branches only ever name refs to match against; anything odd is dropped.
+  const prHeads = (Array.isArray(heads) ? heads : [])
+    .filter((h) => typeof h?.repo === 'string' && typeof h?.branch === 'string' && /^[\w.-]+\/[\w.-]+$/.test(h.repo) && /^[\w.@/+-]{1,200}$/.test(h.branch))
+    .slice(0, 20) as { repo: string; branch: string }[]
+  const key = `${ws}|${ticket}|${prHeads.map((h) => `${h.repo}:${h.branch}`).join(',')}`
   const hit = branchCache.get(key)
   if (hit && Date.now() - hit.at < BRANCH_CACHE_MS) return hit.result
-  const result = ticketBranches(ws, ticket).catch(() => [])
+  const result = ticketBranches(ws, ticket, prHeads).catch(() => [])
   branchCache.set(key, { at: Date.now(), result })
   return result
 })
@@ -547,7 +553,11 @@ ipcMain.handle('settings:reset', async (_e, key: 'workspace' | 'claudeDir') => {
 })
 ipcMain.handle('pty:start', async (_e, sent: PtyStartRequest) => {
   // The session's saved model/effort comes from here, never from the renderer.
-  const req: PtyStartRequest = { ...sent, launch: store.sessionLaunch(sent.sessionId) ?? undefined }
+  const chosen = store.sessionLaunch(sent.sessionId)
+  const req: PtyStartRequest = {
+    ...sent,
+    launch: chosen ? { ...chosen, model: chosen.model && withDefaultContext(chosen.model, await defaultModel()) } : undefined
+  }
   const prBranch = validPrBranch(req.prBranch)
   // An open-pr turn without a usable branch is dropped rather than sent half-filled.
   const kickoff = req.kickoff && KICKOFFS.includes(req.kickoff) && (req.kickoff !== 'open-pr' || prBranch) ? req.kickoff : undefined
@@ -584,13 +594,18 @@ ipcMain.handle('pty:stop', (_e, id: string) => ptys.stop(String(id)))
 ipcMain.handle('session:setLaunch', async (_e, id: string, choice: { model?: unknown; effort?: unknown }) => {
   if (!UUID_RE.test(String(id))) throw new Error('not a session id')
   const next: { model?: string; effort?: string } = {}
+  // Only what the catalog offers this account (or the built-in list), never an arbitrary flag value.
+  const { models } = await readModelCatalog()
   if (choice?.model !== undefined) {
-    if (!MODEL_CHOICES.some((m) => m.alias === choice.model)) throw new Error(`unknown model ${String(choice.model)}`)
+    if (!models.some((m) => m.id === choice.model)) throw new Error(`unknown model ${String(choice.model)}`)
     next.model = choice.model as string
   }
   if (choice?.effort !== undefined) {
-    if (!EFFORT_CHOICES.some((e) => e.level === choice.effort)) throw new Error(`unknown effort ${String(choice.effort)}`)
-    next.effort = choice.effort as string
+    const levels = new Set([...EFFORT_CHOICES.map((e) => e.level as string), ...models.flatMap((m) => (m.efforts ?? []).map((e) => e.id))])
+    if (typeof choice.effort !== 'string' || !levels.has(choice.effort) || !/^[a-z]+$/.test(choice.effort)) {
+      throw new Error(`unknown effort ${String(choice.effort)}`)
+    }
+    next.effort = choice.effort
   }
   await store.setSessionLaunch(id, next)
   notifySessions()
@@ -603,6 +618,7 @@ const installedEditors = () =>
     l.filter((n): n is string => !!n)
   )
 ipcMain.handle('folder:apps', () => installedEditors())
+ipcMain.handle('models:catalog', () => readModelCatalog())
 /** The session's folder (or the project folder for a new chat): never a path from the renderer. */
 ipcMain.handle('folder:open', async (_e, id: string | null, how: string) => {
   const dir = id ? (await findSession(String(id))).startCwd : workspace()
