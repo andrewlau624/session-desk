@@ -35,7 +35,7 @@ const WEIGHT = { customTitle: 4, branch: 3, cwd: 3, aiTitle: 2, ambientBranch: 1
 interface CacheEntry {
   mtimeMs: number
   size: number
-  summary: Omit<SessionSummary, 'liveElsewhere' | 'archived' | 'groupId' | 'pinned' | 'activity'> | null
+  summary: Omit<SessionSummary, 'liveElsewhere' | 'archived' | 'groupId' | 'pinned' | 'activity' | 'launch'> | null
 }
 
 const cache = new Map<string, CacheEntry>()
@@ -85,11 +85,25 @@ export async function parseSession(path: string): Promise<CacheEntry['summary']>
   let planApproved = false
   let edited = false
   let turnEndedAt = 0
+  // The latest reply's model and effort: what /model and /effort are set to now.
+  let model: string | null = null
+  let effort: string | null = null
 
   const lines = raw.split('\n')
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
     if (!line) continue
+    // Model and effort are read straight off the line: every reply carries them,
+    // and parsing each one would be the bulk of the scan.
+    if (line.includes('"type":"assistant"') && !line.includes('"isSidechain":true')) {
+      const m = MODEL_RE.exec(line)?.[1]
+      // `<synthetic>` marks replies the CLI made up itself (errors, interrupts).
+      if (m && !m.startsWith('<')) model = m
+      // The reply's own effort comes after its content, which may hold a tool
+      // call's own "effort" (a subagent asked for low effort, say): take the last.
+      const efforts = [...line.matchAll(EFFORT_RE)]
+      if (efforts.length) effort = efforts[efforts.length - 1][1]
+    }
     // Cheap pre-filter: transcripts are large and most lines are tool output.
     const interesting =
       line.includes('"type":"user"') ||
@@ -187,9 +201,14 @@ export async function parseSession(path: string): Promise<CacheEntry['summary']>
     lastActivity,
     plan: planApproved ? 'approved' : planCalls.size ? 'proposed' : 'none',
     worked: edited || prs.size > 0,
-    turnEndedAt
+    turnEndedAt,
+    model,
+    effort
   }
 }
+
+const MODEL_RE = /"model":"([^"]+)"/
+const EFFORT_RE = /"effort":"([a-z]+)"/g
 
 // Assistant lines are parsed only when they may call one of these (most are long tool chatter).
 const EDIT_TOOLS = new Set(['Edit', 'MultiEdit', 'Write', 'NotebookEdit'])
@@ -278,7 +297,8 @@ export async function listSessions(opts: {
       archived: false,
       groupId: null,
       pinned: false,
-      activity: null
+      activity: null,
+      launch: null
     }))
     .sort((a, b) => b.lastActivity - a.lastActivity)
 }

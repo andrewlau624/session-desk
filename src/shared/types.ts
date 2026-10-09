@@ -108,7 +108,37 @@ export interface SessionSummary {
   worked: boolean
   /** When its last turn ended (ms), from the transcript; 0 if none recorded. */
   turnEndedAt: number
+  /** The model and effort of Claude's latest reply (e.g. claude-opus-5-5, high); null before the first. */
+  model: string | null
+  effort: string | null
+  /** Model and effort chosen for this session in the app (applied whenever the app starts it); null if none. */
+  launch: SessionLaunch | null
 }
+
+/** A session's own model and effort, passed as --model/--effort, so your defaults never change. */
+export interface SessionLaunch {
+  /** A Claude Code alias: opus, opus[1m], sonnet, sonnet[1m], haiku, fable. */
+  model?: string
+  effort?: string
+  /** When it was chosen (ms): replies after this reflect it. */
+  at: number
+}
+
+export const MODEL_CHOICES = [
+  { alias: 'opus', label: 'Opus' },
+  { alias: 'opus[1m]', label: 'Opus (1M context)' },
+  { alias: 'sonnet', label: 'Sonnet' },
+  { alias: 'sonnet[1m]', label: 'Sonnet (1M context)' },
+  { alias: 'haiku', label: 'Haiku' },
+  { alias: 'fable', label: 'Fable' }
+] as const
+export const EFFORT_CHOICES = [
+  { level: 'low', label: 'Low' },
+  { level: 'medium', label: 'Medium' },
+  { level: 'high', label: 'High' },
+  { level: 'xhigh', label: 'Extra high' },
+  { level: 'max', label: 'Max' }
+] as const
 
 /** A user-made sidebar section, like a custom group in the Claude desktop app. */
 export interface SessionGroup {
@@ -139,6 +169,8 @@ export interface PtyStartRequest {
   kickoff?: Kickoff
   /** For an open-pr kickoff. */
   prBranch?: PrBranch
+  /** Set by the main process from the session's saved choice; ignored from the renderer. */
+  launch?: SessionLaunch
 }
 
 /**
@@ -409,6 +441,14 @@ export interface DeskApi {
   ptyKill(sessionId: string): Promise<void>
   /** Checkouts whose branch or folder names the ticket (local git only). */
   ticketBranches(ticket: string): Promise<TicketBranch[]>
+  /** Saves a model and/or effort for this session only (applied the next time it starts). */
+  setSessionLaunch(sessionId: string, choice: { model?: string; effort?: string }): Promise<void>
+  /** Stops a session's process and resolves once it has exited. */
+  ptyStop(sessionId: string): Promise<void>
+  /** Opens the session's folder (or the project folder for a new chat) in Finder, Terminal or an editor. */
+  openFolder(sessionId: string | null, how: 'finder' | 'terminal' | string): Promise<void>
+  /** Code editors installed in /Applications that can open a folder. */
+  folderApps(): Promise<string[]>
   /** Sends a kickoff turn to a session open here and idle at its prompt; false if it isn't open. */
   ptyKickoff(sessionId: string, ticket: string, kind: Kickoff, prBranch?: PrBranch): Promise<boolean>
   onPtyData(cb: (sessionId: string, data: string) => void): () => void

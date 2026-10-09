@@ -19,17 +19,25 @@ async function attempt(fn: () => Promise<unknown>, notify: SessionActionHandlers
   }
 }
 
-/** "Move to group" panel: existing groups, remove-from-group, and create-and-move. */
-function moveEntries(s: SessionSummary, groups: SessionGroup[], notify: SessionActionHandlers['notify']): MenuEntry[] {
+/**
+ * "Move to group" panel, as groups work in Claude Code: the existing groups
+ * (or a note that there are none yet), Remove from group, and New group…,
+ * which creates one and moves the session into it. Project-folder sections
+ * aren't groups: a session stays under the folder it started in.
+ */
+export function moveEntries(s: SessionSummary, groups: SessionGroup[], notify: SessionActionHandlers['notify']): MenuEntry[] {
   return [
-    ...groups.map(
-      (g): MenuEntry => ({
-        label: g.name,
-        disabled: s.groupId === g.id ? 'Current' : false,
-        onSelect: () => attempt(() => window.desk.moveSession(s.id, g.id), notify, `Moved to ${g.name}`)
-      })
-    ),
-    ...(groups.length ? ['divider' as const] : []),
+    ...(groups.length
+      ? groups.map(
+          (g): MenuEntry => ({
+            label: g.name,
+            checked: s.groupId === g.id,
+            disabled: s.groupId === g.id ? 'Current' : false,
+            onSelect: () => attempt(() => window.desk.moveSession(s.id, g.id), notify, `Moved to ${g.name}`)
+          })
+        )
+      : [{ label: 'No groups yet', disabled: ' ' } as MenuEntry]),
+    'divider',
     ...(s.groupId
       ? [
           {
@@ -39,19 +47,24 @@ function moveEntries(s: SessionSummary, groups: SessionGroup[], notify: SessionA
         ]
       : []),
     {
-      label: 'New group',
-      input: {
-        placeholder: 'New group name',
-        onSubmit: (name) =>
-          attempt(
-            async () => {
-              const g = await window.desk.createGroup(name)
-              await window.desk.moveSession(s.id, g.id)
-            },
-            notify,
-            `Moved to ${name}`
-          )
-      }
+      label: 'New group…',
+      submenu: [
+        {
+          label: 'New group',
+          input: {
+            placeholder: 'Group name',
+            onSubmit: (name) =>
+              attempt(
+                async () => {
+                  const g = await window.desk.createGroup(name)
+                  await window.desk.moveSession(s.id, g.id)
+                },
+                notify,
+                `Moved to ${name}`
+              )
+          }
+        }
+      ]
     }
   ]
 }

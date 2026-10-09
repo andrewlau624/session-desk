@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { CONFIG_NAME, loadProjectConfig, projectConfig, projectConfigStatus, starterConfig, watchProjectConfig } from './projectConfig'
 import type { Column, Kickoff, LinearStatus, PtyStartRequest, RenameResult, SessionSummary, Settings, TicketBranch } from '../shared/types'
-import { COLUMNS } from '../shared/types'
+import { COLUMNS, EFFORT_CHOICES, MODEL_CHOICES } from '../shared/types'
 import { refreshPrInfo, requestGreptileReview, withInfo } from './github'
 import { Indicators } from './indicators'
 import { fetchBoard, fetchIssue, invalidate, linearStatus, moveIssue, refreshPrTickets, resetLinear } from './linear'
@@ -158,7 +158,8 @@ async function scanSessions(): Promise<SessionSummary[]> {
     groupId: store.groupOf(s.id),
     pinned: store.isPinned(s.id),
     // A status file outlives a crashed process; only trust it while one has the session open.
-    activity: ptys.has(s.id) || s.liveElsewhere ? pickActivity(withTurnEnd(activityOf(s.id), s.turnEndedAt)) : null
+    activity: ptys.has(s.id) || s.liveElsewhere ? pickActivity(withTurnEnd(activityOf(s.id), s.turnEndedAt)) : null,
+    launch: store.sessionLaunch(s.id)
   }))
 }
 
@@ -544,7 +545,9 @@ ipcMain.handle('settings:reset', async (_e, key: 'workspace' | 'claudeDir') => {
   pathsChanged()
   return settingsView()
 })
-ipcMain.handle('pty:start', async (_e, req: PtyStartRequest) => {
+ipcMain.handle('pty:start', async (_e, sent: PtyStartRequest) => {
+  // The session's saved model/effort comes from here, never from the renderer.
+  const req: PtyStartRequest = { ...sent, launch: store.sessionLaunch(sent.sessionId) ?? undefined }
   const prBranch = validPrBranch(req.prBranch)
   // An open-pr turn without a usable branch is dropped rather than sent half-filled.
   const kickoff = req.kickoff && KICKOFFS.includes(req.kickoff) && (req.kickoff !== 'open-pr' || prBranch) ? req.kickoff : undefined
@@ -577,6 +580,42 @@ ipcMain.handle('pty:kickoff', async (_e, sessionId: string, ticket: string, kind
 /** Long enough for Claude Code to take the text as one paste before Enter arrives (250ms measured). */
 const KICKOFF_ENTER_DELAY_MS = 250
 ipcMain.handle('pty:kill', (_e, id: string) => ptys.kill(id))
+ipcMain.handle('pty:stop', (_e, id: string) => ptys.stop(String(id)))
+ipcMain.handle('session:setLaunch', async (_e, id: string, choice: { model?: unknown; effort?: unknown }) => {
+  if (!UUID_RE.test(String(id))) throw new Error('not a session id')
+  const next: { model?: string; effort?: string } = {}
+  if (choice?.model !== undefined) {
+    if (!MODEL_CHOICES.some((m) => m.alias === choice.model)) throw new Error(`unknown model ${String(choice.model)}`)
+    next.model = choice.model as string
+  }
+  if (choice?.effort !== undefined) {
+    if (!EFFORT_CHOICES.some((e) => e.level === choice.effort)) throw new Error(`unknown effort ${String(choice.effort)}`)
+    next.effort = choice.effort as string
+  }
+  await store.setSessionLaunch(id, next)
+  notifySessions()
+})
+
+// Editors that open a folder with `open -a`, if installed.
+const EDITORS = ['Visual Studio Code', 'Cursor', 'Zed', 'Sublime Text', 'Nova']
+const installedEditors = () =>
+  Promise.all(EDITORS.map(async (n) => ((await fs.stat(`/Applications/${n}.app`).catch(() => null)) ? n : null))).then((l) =>
+    l.filter((n): n is string => !!n)
+  )
+ipcMain.handle('folder:apps', () => installedEditors())
+/** The session's folder (or the project folder for a new chat): never a path from the renderer. */
+ipcMain.handle('folder:open', async (_e, id: string | null, how: string) => {
+  const dir = id ? (await findSession(String(id))).startCwd : workspace()
+  if (!dir || !(await fs.stat(dir).catch(() => null))?.isDirectory()) throw new Error('That folder no longer exists')
+  if (how === 'finder') {
+    const err = await shell.openPath(dir)
+    if (err) throw new Error(err)
+    return
+  }
+  const app = how === 'terminal' ? 'Terminal' : (await installedEditors()).find((n) => n === how)
+  if (!app) throw new Error(`unknown app ${how}`)
+  await new Promise<void>((resolve, reject) => execFile('open', ['-a', app, dir], (err) => (err ? reject(new Error(err.message)) : resolve())))
+})
 ipcMain.on('pty:write', (_e, id: string, data: string) => ptys.write(id, data))
 ipcMain.on('pty:resize', (_e, id: string, cols: number, rows: number) => ptys.resize(id, cols, rows))
 ipcMain.on('open-external', (_e, url: string) => openExternal(url))

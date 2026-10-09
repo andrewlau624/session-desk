@@ -37,3 +37,12 @@ export function errorMessage(e: unknown): string {
 export function folderName(p: string): string {
   return p.replace(/\/+$/, '').split('/').pop() || p
 }
+
+/** A model id as people say it: claude-opus-5-5 -> Opus 5.5, claude-sonnet-4-20250514 -> Sonnet 4. Unknown ids as they are. */
+export function modelLabel(id: string): string {
+  const m = /^claude-([a-z]+)-(\d+)(?:-(\d{1,2}))?(?:-\d{8})?(\[1m\])?$/.exec(id)
+  if (!m) return id
+  const [, family, major, minor, longContext] = m
+  return `${family.charAt(0).toUpperCase()}${family.slice(1)} ${major}${minor ? `.${minor}` : ''}${longContext ? ' (1M)' : ''}`
+}
+

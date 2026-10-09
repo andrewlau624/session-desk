@@ -395,6 +395,49 @@ a:hover {
   font-size: 13px;
 }
 
+.folder-chip-button {
+  border: none;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+
+.folder-chip-button:hover {
+  color: var(--text);
+}
+
+/* Under the terminal: the model and effort, as in the Claude desktop app's prompt area. */
+.session-footer {
+  flex: none;
+  display: flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 14px;
+  border-top: 1px solid var(--border);
+  background: var(--term-bg);
+}
+
+.model-button {
+  border: none;
+  background: none;
+  padding: 3px 6px;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.model-button:hover {
+  background: var(--hover);
+}
+
+.model-caret {
+  margin-left: 4px;
+  color: var(--text-muted);
+}
+
 .topbar-actions {
   -webkit-app-region: no-drag;
   margin-left: auto;
@@ -1051,6 +1094,21 @@ a:hover {
   margin-left: auto;
   font-size: 12px;
   color: var(--text-muted);
+}
+
+.menu-heading {
+  padding: 6px 10px 2px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.menu-check {
+  width: 12px;
+  margin-right: -4px;
+  color: var(--accent);
 }
 
 .menu-divider {

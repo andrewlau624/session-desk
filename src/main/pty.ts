@@ -83,6 +83,9 @@ export class PtyManager {
     if (!req.resume && name) args.push('--name', name)
     if (brief && (!req.resume || req.kickoff)) args.push('--append-system-prompt', brief)
     // Planning runs in plan mode: Claude can read but not edit until you approve.
+    // The session's own model and effort: flags apply to this process only, unlike /model.
+    if (req.launch?.model) args.push('--model', req.launch.model)
+    if (req.launch?.effort) args.push('--effort', req.launch.effort)
     if (prompt && req.kickoff && PLAN_KICKOFFS.has(req.kickoff)) args.push('--permission-mode', 'plan')
     if (prompt) args.push('--', prompt)
     const proc = spawnClaude(args, req.cwd, req.cols, req.rows)
@@ -140,6 +143,30 @@ export class PtyManager {
 
   kill(sessionId: string): void {
     this.terms.get(sessionId)?.proc.kill()
+  }
+
+  /**
+   * Stops the session's process and resolves once it has exited (SIGKILL after
+   * 5s), after the exit has been reported, so a restart never races it.
+   */
+  stop(sessionId: string): Promise<void> {
+    const t = this.terms.get(sessionId)
+    if (!t) return Promise.resolve()
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        try {
+          t.proc.kill('SIGKILL')
+        } catch {
+          // Already gone.
+        }
+      }, 5000)
+      const sub = t.proc.onExit(() => {
+        clearTimeout(timer)
+        sub.dispose()
+        resolve()
+      })
+      t.proc.kill()
+    })
   }
 
   killAll(): void {

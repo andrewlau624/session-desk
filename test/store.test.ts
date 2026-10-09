@@ -45,3 +45,15 @@ describe('store', () => {
     expect(saved.prefs.notifyElsewhere).toBe(true)
   })
 })
+
+describe('a session’s own model and effort', () => {
+  it('merges choices per session and is forgotten with the session', async () => {
+    const id = '44444444-4444-4444-8444-444444444444'
+    expect(store.sessionLaunch(id)).toBeNull()
+    await store.setSessionLaunch(id, { model: 'sonnet' })
+    await store.setSessionLaunch(id, { effort: 'low' })
+    expect(store.sessionLaunch(id)).toMatchObject({ model: 'sonnet', effort: 'low' })
+    await store.forgetSession(id)
+    expect(store.sessionLaunch(id)).toBeNull()
+  })
+})

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { BoardCard, Kickoff, LinearIssue, LinearStatus, PrBranch, SessionGroup, SessionSummary, TicketBranch } from '../../shared/types'
+import type { BoardCard, Kickoff, LinearIssue, LinearStatus, PrBranch, SessionGroup, SessionLaunch, SessionSummary, TicketBranch } from '../../shared/types'
 import { Board } from './components/Board'
 import { LinearSettings } from './components/LinearSettings'
 import { SessionHeader } from './components/SessionHeader'
@@ -11,6 +11,8 @@ import { CommandPalette } from './components/CommandPalette'
 import { SettingsDialog } from './components/SettingsDialog'
 import { Artifacts } from './components/Artifacts'
 import { errorMessage, folderName, setLinearWorkspaceKey } from './format'
+import { FolderChip } from './components/FolderChip'
+import { ModelPicker } from './components/ModelPicker'
 import { busyReason, readiness, startWork, startWorkNotice } from './startWork'
 
 interface OpenTerm {
@@ -221,7 +223,10 @@ export function App() {
         activity: null,
         plan: 'none',
         worked: false,
-        turnEndedAt: 0
+        turnEndedAt: 0,
+        model: null,
+        effort: null,
+        launch: null
       }
     }))
     openTerm({ id, resume: false, cwd: defaultCwd, name, ticket: issue.identifier, kickoff: opts.kickoff })
@@ -317,6 +322,27 @@ export function App() {
   const activeTermId = nav.kind === 'session' ? nav.id : nav.kind === 'new' ? (draft?.id ?? null) : null
   const activeTerm = terms.find((t) => t.id === activeTermId)
 
+  // Model/effort chosen here. The scan reports it for sessions; a new chat has
+  // no summary yet, so its choice is kept here (it also shows before the scan catches up).
+  const [launchChoice, setLaunchChoice] = useState<Record<string, SessionLaunch>>({})
+
+  /** For this session only: saved, then its Claude is restarted with --model/--effort. */
+  const chooseLaunch = async (id: string, choice: { model?: string; effort?: string }) => {
+    try {
+      await window.desk.setSessionLaunch(id, choice)
+      setLaunchChoice((c) => ({ ...c, [id]: { ...c[id], ...choice, at: Date.now() } }))
+      // Wait for the old process to exit, so the new one never overlaps it.
+      if (runningIds.has(id)) await window.desk.ptyStop(id)
+      const resume = scanned.some((s) => s.id === id)
+      setTerms((ts) =>
+        ts.map((t) => (t.id === id ? { ...t, resume, kickoff: undefined, prBranch: undefined, gen: t.gen + 1, exited: false } : t))
+      )
+      notify(resume ? 'Restarting this session with the new setting' : 'Applied to this new chat')
+    } catch (e) {
+      notify(errorMessage(e), 'error')
+    }
+  }
+
   const markExited = (id: string) => setTerms((ts) => ts.map((t) => (t.id === id ? { ...t, exited: true } : t)))
   // Resume only works once a transcript exists; a session that exited before
   // anything was sent starts over under the same id.
@@ -370,9 +396,11 @@ export function App() {
             </h1>
           )}
           {topbarCwd && (
-            <span className="folder-chip" title={topbarCwd}>
-              {folderName(topbarCwd)}
-            </span>
+            <FolderChip
+              path={topbarCwd}
+              sessionId={nav.kind === 'session' ? (selected?.id ?? null) : null}
+              notify={notify}
+            />
           )}
           <div className="topbar-actions" ref={setTopbarActions} />
         </div>
@@ -456,6 +484,16 @@ export function App() {
             </div>
           )}
         </div>
+        {activeTermId && (nav.kind === 'session' ? !!selected : !!defaultCwd) && (
+          <div className="session-footer">
+            <ModelPicker
+              session={nav.kind === 'session' ? (selected ?? null) : null}
+              launch={(nav.kind === 'session' ? selected?.launch : null) ?? launchChoice[activeTermId] ?? null}
+              blocked={nav.kind === 'session' && selected ? busyReason(readiness(selected, runningIds)) : null}
+              onChoose={(choice) => chooseLaunch(activeTermId, choice)}
+            />
+          </div>
+        )}
       </main>
 
       {notice && (

@@ -2,7 +2,7 @@ import { promises as fs, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { app, safeStorage } from 'electron'
-import type { LinearWorkspace, SessionGroup } from '../shared/types'
+import type { LinearWorkspace, SessionGroup, SessionLaunch } from '../shared/types'
 
 /** App-owned state. Nothing here is written back to Claude Code's own files. */
 interface Data {
@@ -20,6 +20,8 @@ interface Data {
   /** sessionId -> groupId. */
   membership: Record<string, string>
   pinned: Record<string, true>
+  /** sessionId -> the model/effort chosen for it in the app (passed as flags; your defaults stay). */
+  sessionLaunch?: Record<string, SessionLaunch>
   /** sessionId -> what the app did about its pin as its ticket moved (see autoPin.ts). */
   autoPin: Record<string, AutoPin>
   /** Project-folder sections collapsed in the sidebar, by folder path. */
@@ -155,6 +157,15 @@ export const store = {
     delete d.membership[sessionId]
     delete d.pinned[sessionId]
     delete d.autoPin[sessionId]
+    if (d.sessionLaunch) delete d.sessionLaunch[sessionId]
+    return save()
+  },
+
+  sessionLaunch: (sessionId: string): SessionLaunch | null => load().sessionLaunch?.[sessionId] ?? null,
+  setSessionLaunch(sessionId: string, choice: { model?: string; effort?: string }) {
+    const d = load()
+    const prev = d.sessionLaunch?.[sessionId]
+    d.sessionLaunch = { ...d.sessionLaunch, [sessionId]: { ...prev, ...choice, at: Date.now() } }
     return save()
   },
 
