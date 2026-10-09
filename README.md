@@ -25,7 +25,7 @@ About 150 tests in a few seconds, no network and no access to your real `~/.clau
 npm run install-app
 ```
 
-Builds `Session Desk.app` (Apple Silicon, ad-hoc signed; no developer certificate needed to run it on this Mac) and copies it to `/Applications` (or to `~/Applications` for a user who can't write `/Applications`), removing any older copy from the other folder. Quit the installed copy first; the script refuses to replace a running app. The menu bar's Session Desk menu has **Open at Login** (installed app only) and the notification settings.
+Builds `Session Desk.app` (Apple Silicon, ad-hoc signed; no developer certificate needed to run it on this Mac) and copies it to `~/Applications`, removing an older copy of yours from `/Applications` (another user's copy there is left alone). Quit the installed copy first; the script refuses to replace a running app. The menu bar's Session Desk menu has **Open at Login** (installed app only) and the notification settings.
 
 **Signing.** `install-app` re-signs the build with a stable identity when the keychain has one: `SESSION_DESK_SIGNING_IDENTITY` if set, else any "Developer ID Application" identity, else a self-signed "Session Desk Local Signing" certificate. A stable identity keeps the app's designated requirement the same across builds, so macOS asks for Keychain access to the saved Linear key once, not after every rebuild. With none, the build stays ad-hoc signed and macOS re-asks each time (the app waits until you answer). The first signed build asks once to let `codesign` use the key.
 
@@ -43,7 +43,7 @@ Per user, so each account on a Mac has its own:
 - **Claude Code folder**: where sessions, transcripts and memory notes live. Defaults to `$CLAUDE_CONFIG_DIR` from your login shell, else `~/.claude`. A non-default folder is passed to every `claude` the app starts (as `CLAUDE_CONFIG_DIR`), so sessions and the app agree.
 - **Linear** connection.
 
-One copy in `/Applications` serves every user on the Mac (a non-admin user's `npm run install-app` goes to their own `~/Applications`); app state, the Keychain-held Linear key and the status files are already per user.
+Each user installs their own copy (`npm run install-app` → their `~/Applications`), so one account's install never replaces another's; app state, the Keychain-held Linear key and the status files are per user too.
 
 ## Project settings (`.session-desk.json`)
 

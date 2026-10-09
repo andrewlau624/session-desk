@@ -1,45 +1,44 @@
 #!/usr/bin/env node
-// Copies the built app to /Applications/Session Desk.app, or to ~/Applications
-// when this user can't write /Applications (not an admin).
+// Copies the built app to ~/Applications/Session Desk.app: each macOS user
+// installs their own copy, so one account's install never replaces another's.
 // Run via `npm run install-app`, which builds first.
 
 import { execFileSync } from 'node:child_process'
-import { accessSync, constants, existsSync, mkdirSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, rmSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
 const NAME = 'Session Desk.app'
 const built = join('dist', 'mac-arm64', NAME)
-const SYSTEM_APPS = '/Applications'
-const USER_APPS = join(homedir(), 'Applications')
-const writable = (dir) => {
+const appsDir = join(homedir(), 'Applications')
+const target = join(appsDir, NAME)
+// A copy this user once installed in /Applications: removed below so Spotlight
+// and Launchpad find one Session Desk. Another user's copy there is theirs and
+// is never touched.
+const legacy = join('/Applications', NAME)
+const mine = (app) => {
   try {
-    accessSync(dir, constants.W_OK)
-    return true
+    return statSync(app).uid === process.getuid()
   } catch {
     return false
   }
 }
-const appsDir = writable(SYSTEM_APPS) ? SYSTEM_APPS : USER_APPS
-const target = join(appsDir, NAME)
-// A copy left in the other folder (say, from before installs went to /Applications):
-// removed below so Spotlight and Launchpad find only one Session Desk.
-const other = join(appsDir === SYSTEM_APPS ? USER_APPS : SYSTEM_APPS, NAME)
 
 if (!existsSync(built)) {
   console.error(`No build at ${built}. Run \`npm run dist\` first.`)
   process.exit(1)
 }
 
-// Replacing a running app's bundle out from under it breaks it.
+// Replacing a running app's bundle out from under it breaks it. Only this
+// user's processes count: another account may be running its own copy.
 const runningFrom = (app) => {
   try {
-    return execFileSync('pgrep', ['-f', `${app}/Contents/MacOS/`], { encoding: 'utf8' }).trim() !== ''
+    return execFileSync('pgrep', ['-U', String(process.getuid()), '-f', `${app}/Contents/MacOS/`], { encoding: 'utf8' }).trim() !== ''
   } catch {
     return false
   }
 }
-for (const app of [target, other]) {
+for (const app of [target, ...(mine(legacy) ? [legacy] : [])]) {
   if (existsSync(app) && runningFrom(app)) {
     console.error(`Session Desk is running from ${app}. Quit it (⌘Q), then run this again.`)
     process.exit(1)
@@ -82,7 +81,11 @@ if (existsSync(target) && target.endsWith(`/Applications/${NAME}`)) rmSync(targe
 execFileSync('ditto', [built, target])
 execFileSync('codesign', ['--verify', '--deep', target])
 console.log(`Installed ${target}`)
-if (existsSync(other) && writable(join(other, '..'))) {
-  rmSync(other, { recursive: true })
-  console.log(`Removed the old copy at ${other}`)
+if (existsSync(legacy)) {
+  if (mine(legacy)) {
+    rmSync(legacy, { recursive: true })
+    console.log(`Removed your old copy at ${legacy}`)
+  } else {
+    console.log(`Left ${legacy} alone: it belongs to another user`)
+  }
 }
