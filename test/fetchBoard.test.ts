@@ -70,13 +70,16 @@ describe('fetchBoard', () => {
     ]
     const before = Date.now()
     const board = await fetchBoard()
+    const after = Date.now()
     expect(requests).toHaveLength(2)
     expect(board).toMatchObject({ cycle: null, noCycles: true })
     expect(board.issues.map((i) => i.identifier)).toEqual(['ENG-2', 'ENG-3'])
     // Finished issues are bounded to the recent window, not every issue ever closed.
+    // The code reads the clock between `before` and `after`, so the window ends in that span.
     const since = Date.parse(requests[1].variables.since as string)
-    expect(before - since).toBeGreaterThanOrEqual(NO_CYCLE_DONE_DAYS * 86_400_000)
-    expect(before - since).toBeLessThan(NO_CYCLE_DONE_DAYS * 86_400_000 + 60_000)
+    const window = NO_CYCLE_DONE_DAYS * 86_400_000
+    expect(since).toBeGreaterThanOrEqual(before - window)
+    expect(since).toBeLessThanOrEqual(after - window)
     expect(requests[1].query).toContain('completedAt: { gt: $since }')
     expect(requests[1].query).toContain('nin: ["canceled", "duplicate"]')
   })
