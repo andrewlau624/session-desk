@@ -112,5 +112,5 @@ export function buildBoard(raw: RawBoard, sessions: SessionSummary[]): Board {
       relatedPrs: related.filter((pr) => !prs.has(pr.url))
     }
   })
-  return { cycle: raw.cycle, cards }
+  return { cycle: raw.cycle, ...(raw.noCycles && { noCycles: true }), cards }
 }

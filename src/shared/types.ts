@@ -381,6 +381,8 @@ export interface BoardCard {
 
 export interface Board {
   cycle: { number: number; endsAt: string } | null
+  /** None of my teams has an active cycle, so the cards are my assigned issues instead. */
+  noCycles?: boolean
   cards: BoardCard[]
   /** Automatic moves: which of the app's rules are on, and Linear's own GitHub rules for the team. */
   automation?: { start: boolean; review: boolean; linear: { event: string; state: string }[] }

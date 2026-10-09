@@ -120,7 +120,9 @@ export function Board({ connected, running, onOpenCard, onStartWork, onConnect, 
       )}
       {error && <div className="banner-error">{error}</div>}
       {board && !board.cycle && board.cards.length === 0 && (
-        <p className="muted board-empty">No issues assigned to you in an active cycle.</p>
+        <p className="muted board-empty">
+          {board.noCycles ? 'No open issues assigned to you.' : 'No issues assigned to you in an active cycle.'}
+        </p>
       )}
       <div className="board">
         {COLUMNS.map((col) => {

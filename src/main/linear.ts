@@ -16,6 +16,8 @@ interface State {
 
 export interface RawBoard {
   cycle: { number: number; endsAt: string } | null
+  /** None of my teams has an active cycle, so the board holds my assigned issues instead. */
+  noCycles?: boolean
   issues: (LinearIssue & { teamId: string })[]
 }
 
@@ -147,12 +149,24 @@ export function resetLinear(): void {
   prTickets.clear()
 }
 
-/** My issues in the active cycle, excluding canceled and duplicate ones. */
+/** How far back finished issues stay on the board when there are no cycles to bound it. */
+export const NO_CYCLE_DONE_DAYS = 14
+/** Pages of 100 read without cycles: a backlog past 500 open issues is cut, most recently updated kept. */
+export const NO_CYCLE_MAX_PAGES = 5
+
+/**
+ * My issues in the active cycle, excluding canceled and duplicate ones. When none
+ * of my teams runs cycles right now (one team with a cycle keeps the board to it),
+ * my open issues instead, plus ones finished
+ * in the last NO_CYCLE_DONE_DAYS (without that bound, Done would fill with every
+ * issue I ever closed).
+ */
 export async function fetchBoard(): Promise<RawBoard> {
   if (boardCache && Date.now() - boardCache.at < BOARD_TTL_MS) return boardCache.board
-  const d = await gql<{ viewer: { assignedIssues: { nodes: any[] } } }>(`
+  const d = await gql<{ viewer: { teams: { nodes: { activeCycle: { id: string } | null }[] }; assignedIssues: { nodes: any[] } } }>(`
     query {
       viewer {
+        teams(first: 100) { nodes { activeCycle { id } } }
         assignedIssues(
           first: 100
           filter: {
@@ -162,8 +176,41 @@ export async function fetchBoard(): Promise<RawBoard> {
         ) { nodes { ${ISSUE_FIELDS} } }
       }
     }`)
-  const nodes = d.viewer.assignedIssues.nodes
-  const board: RawBoard = { cycle: nodes.find((n) => n.cycle)?.cycle ?? null, issues: nodes.map(toIssue) }
+  let board: RawBoard
+  if (d.viewer.teams.nodes.some((t) => t.activeCycle)) {
+    const nodes = d.viewer.assignedIssues.nodes
+    board = { cycle: nodes.find((n) => n.cycle)?.cycle ?? null, issues: nodes.map(toIssue) }
+  } else {
+    // A whole backlog can run past one page; an issue cut off the end would vanish
+    // from the board and from the automatic moves, so read every page (up to a cap).
+    const since = new Date(Date.now() - NO_CYCLE_DONE_DAYS * 86_400_000).toISOString()
+    const nodes: any[] = []
+    let after: string | null = null
+    for (let page = 0; page < NO_CYCLE_MAX_PAGES; page++) {
+      const r: { viewer: { assignedIssues: { nodes: any[]; pageInfo: { hasNextPage: boolean; endCursor: string | null } } } } = await gql(
+        `
+        query($since: DateTimeOrDuration!, $after: String) {
+          viewer {
+            assignedIssues(
+              first: 100
+              after: $after
+              orderBy: updatedAt
+              filter: {
+                state: { type: { nin: ["canceled", "duplicate"] } }
+                or: [{ state: { type: { neq: "completed" } } }, { completedAt: { gt: $since } }]
+              }
+            ) { nodes { ${ISSUE_FIELDS} } pageInfo { hasNextPage endCursor } }
+          }
+        }`,
+        { since, after }
+      )
+      nodes.push(...r.viewer.assignedIssues.nodes)
+      const { hasNextPage, endCursor } = r.viewer.assignedIssues.pageInfo
+      if (!hasNextPage || !endCursor) break
+      after = endCursor
+    }
+    board = { cycle: null, noCycles: true, issues: nodes.map(toIssue) }
+  }
   boardCache = { at: Date.now(), board }
   return board
 }
