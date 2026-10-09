@@ -184,6 +184,12 @@ Under the terminal, two buttons show the session's model and effort (from Claude
 
 The list comes from the model catalog Claude Code caches for your account (`~/.claude/cache/model-catalog`, refreshed about hourly), so new models appear without an app update: main models first, older ones under More models, each with its own effort levels and badges. Models newer than your installed Claude Code are left out. If the catalog can't be read, a built-in list is used.
 
+## Context and usage limits
+
+The ring at the right of the footer shows how full the session's context window is; click it for the details, as in the Claude desktop app: tokens used of the window, about how far until auto-compact (documented for 1M-context models, ~967K), and your plan's limits: the 5-hour session limit and the weekly limit for all models, each with its reset time. **Compact session** and **See detailed breakdown** send `/compact` and `/usage` to the session when it's idle; neither changes any setting.
+
+The numbers come from Claude Code's status line input. Sessions this app starts get a status line of the app's own, passed with `--settings` for that session only (your settings never change), which saves that input to `~/.session-desk/usage/` and then runs your own status line, if you have one, so what you see in the terminal stays the same. A session started elsewhere shows only the tokens in its last reply, from its transcript. Claude Code doesn't report the per-model weekly limit, so that one isn't shown.
+
 ## Sidebar
 
 Each session row has a `…` menu on hover (or right-click): Rename, Move to group, Archive, Delete. The title-bar menu has the same items plus Stop, Open in Terminal, copy commands and Show transcript.

@@ -420,6 +420,77 @@ a:hover {
   background: var(--term-bg);
 }
 
+.usage-button {
+  display: flex;
+  align-items: center;
+  padding: 3px 5px;
+}
+
+/* The desktop app's usage popover: context window, then plan limits. */
+.usage-panel {
+  position: fixed;
+  z-index: 50;
+  width: 320px;
+  background: var(--surface, var(--bg));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
+  font-size: 12.5px;
+}
+
+.usage-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+}
+
+.usage-section + .usage-section {
+  border-top: 1px solid var(--border);
+}
+
+.usage-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.usage-limit {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.usage-meter {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.usage-meter-fill {
+  height: 100%;
+  background: var(--accent);
+}
+
+.usage-meter-fill.warn {
+  background: #d4a017;
+}
+
+.usage-meter-fill.bad {
+  background: var(--danger, #c0392b);
+}
+
+.usage-section .btn {
+  flex: none;
+  white-space: nowrap;
+}
+
+.usage-empty {
+  margin: 0;
+}
+
 .model-button {
   border: none;
   background: none;

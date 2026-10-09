@@ -2,6 +2,7 @@ import * as pty from 'node-pty'
 import type { PtyStartRequest } from '../shared/types'
 import { claudeDirOverride } from './paths'
 import { PLAN_KICKOFFS } from './ticketBrief'
+import { statusLineLaunch } from './usage'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -41,12 +42,15 @@ export function cleanName(name: string): string {
 // the pty's pid the claude pid. Args go in as positionals, never interpolated
 // into the command string.
 function spawnClaude(args: string[], cwd: string, cols: number, rows: number): pty.IPty {
-  return pty.spawn(process.env.SHELL || '/bin/zsh', ['-ilc', 'exec claude "$@"', 'claude', ...args], {
+  // Our status line, for this session only: it saves the context window and
+  // plan limits Claude Code reports, then shows yours if you have one.
+  const status = statusLineLaunch()
+  return pty.spawn(process.env.SHELL || '/bin/zsh', ['-ilc', 'exec claude "$@"', 'claude', ...status.args, ...args], {
     name: 'xterm-256color',
     cols,
     rows,
     cwd,
-    env: cleanEnv()
+    env: { ...cleanEnv(), ...status.env }
   })
 }
 

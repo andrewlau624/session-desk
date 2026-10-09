@@ -14,6 +14,7 @@ import { Artifacts } from './components/Artifacts'
 import { errorMessage, folderName, setLinearWorkspaceKey } from './format'
 import { FolderChip } from './components/FolderChip'
 import { ModelPicker } from './components/ModelPicker'
+import { UsageButton } from './components/UsageButton'
 import { busyReason, readiness, startWork, startWorkNotice } from './startWork'
 
 interface OpenTerm {
@@ -227,6 +228,7 @@ export function App() {
         turnEndedAt: 0,
         model: null,
         effort: null,
+        contextTokens: null,
         launch: null
       }
     }))
@@ -497,6 +499,11 @@ export function App() {
               launch={(nav.kind === 'session' ? selected?.launch : null) ?? launchChoice[activeTermId] ?? null}
               blocked={nav.kind === 'session' && selected ? busyReason(readiness(selected, runningIds)) : null}
               onChoose={(choice) => chooseLaunch(activeTermId, choice)}
+            />
+            <UsageButton
+              sessionId={activeTermId}
+              blocked={nav.kind === 'session' && selected ? busyReason(readiness(selected, runningIds)) : null}
+              notify={notify}
             />
           </div>
         )}

@@ -47,6 +47,7 @@ export function session(over: Partial<SessionSummary>): SessionSummary {
     turnEndedAt: 0,
     model: null,
     effort: null,
+    contextTokens: null,
     launch: null,
     ...over
   }

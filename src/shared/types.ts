@@ -111,6 +111,8 @@ export interface SessionSummary {
   /** The model and effort of Claude's latest reply (e.g. claude-opus-5-5, high); null before the first. */
   model: string | null
   effort: string | null
+  /** Tokens in context at Claude's latest reply (input plus cache), from the transcript; null before the first. */
+  contextTokens: number | null
   /** Model and effort chosen for this session in the app (applied whenever the app starts it); null if none. */
   launch: SessionLaunch | null
 }
@@ -122,6 +124,25 @@ export interface SessionLaunch {
   effort?: string
   /** When it was chosen (ms): replies after this reflect it. */
   at: number
+}
+
+export interface UsageLimit {
+  usedPercent: number
+  /** When it resets (ms); null if not given. */
+  resetsAt: number | null
+}
+
+/**
+ * A session's context use and the plan's usage limits. status-line: exact,
+ * from the status line of a session this app started; transcript: just the
+ * tokens from its last reply (window size unknown); none: nothing yet.
+ */
+export interface SessionUsage {
+  source: 'status-line' | 'transcript' | 'none'
+  context: { used: number; size: number | null; autoCompactAt: number | null } | null
+  /** Account-wide: the 5-hour session limit and the weekly limit for all models. */
+  limits: { fiveHour: UsageLimit | null; sevenDay: UsageLimit | null; at: number } | null
+  at: number | null
 }
 
 /** A model as Claude Code's catalog describes it (see src/main/modelCatalog.ts). */
@@ -549,6 +570,10 @@ export interface DeskApi {
   listRemoteLeftovers(): Promise<RemoteLeftover[]>
   /** Deletes a listed branch on GitHub after re-checking it; resolves with the commit it pointed at. */
   deleteRemoteBranch(slug: string, branch: string): Promise<string>
+  /** The session's context window use and the plan's usage limits. */
+  sessionUsage(sessionId: string): Promise<SessionUsage>
+  /** Types /compact or /usage into a session open here and idle at its prompt. */
+  sessionCommand(sessionId: string, command: '/compact' | '/usage'): Promise<boolean>
   /** Code editors installed in /Applications that can open a folder. */
   folderApps(): Promise<string[]>
   /** Sends a kickoff turn to a session open here and idle at its prompt; false if it isn't open. */

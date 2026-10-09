@@ -5,6 +5,7 @@ import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { CONFIG_NAME, loadProjectConfig, projectConfig, projectConfigStatus, starterConfig, watchProjectConfig } from './projectConfig'
 import { defaultModel, withDefaultContext } from './modelChoice'
 import { readModelCatalog } from './modelCatalog'
+import { installStatusLine, readUsage } from './usage'
 import type { Column, Kickoff, LinearStatus, PtyStartRequest, RenameResult, SessionSummary, Settings, TicketBranch } from '../shared/types'
 import { COLUMNS, EFFORT_CHOICES } from '../shared/types'
 import { refreshPrInfo, requestGreptileReview, withInfo } from './github'
@@ -637,6 +638,20 @@ const installedEditors = () =>
   )
 ipcMain.handle('folder:apps', () => installedEditors())
 ipcMain.handle('models:catalog', () => readModelCatalog())
+ipcMain.handle('usage:get', async (_e, id: string) => {
+  if (!UUID_RE.test(String(id))) throw new Error('not a session id')
+  const s = (await sessions()).find((x) => x.id === id)
+  return readUsage(id, s?.contextTokens ?? null)
+})
+/** Types /compact or /usage at an idle prompt (neither changes any setting, unlike /model). */
+ipcMain.handle('pty:command', async (_e, id: string, command: string) => {
+  if (!ptys.has(String(id)) || (command !== '/compact' && command !== '/usage')) return false
+  ptys.write(id, command)
+  await new Promise((r) => setTimeout(r, KICKOFF_ENTER_DELAY_MS))
+  if (!ptys.has(id)) return false
+  ptys.write(id, '\r')
+  return true
+})
 /** The session's folder (or the project folder for a new chat): never a path from the renderer. */
 ipcMain.handle('folder:open', async (_e, id: string | null, how: string) => {
   const dir = id ? (await findSession(String(id))).startCwd : workspace()
@@ -672,6 +687,7 @@ app.whenReady().then(() => {
     .then(installMenu)
     .catch(() => {})
   startWatching()
+  void installStatusLine().catch(() => {})
   void reloadProjectConfig().then(() => win?.webContents.send('settings:changed'))
   // A Dock launch doesn't inherit CLAUDE_CONFIG_DIR; ask the login shell, then
   // re-point the watchers if it names another folder.

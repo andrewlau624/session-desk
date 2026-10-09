@@ -88,6 +88,8 @@ export async function parseSession(path: string): Promise<CacheEntry['summary']>
   // The latest reply's model and effort: what /model and /effort are set to now.
   let model: string | null = null
   let effort: string | null = null
+  // Tokens in context at the latest reply: its input plus cache reads and writes.
+  let contextTokens: number | null = null
 
   const lines = raw.split('\n')
   for (let i = 0; i < lines.length; i++) {
@@ -103,6 +105,9 @@ export async function parseSession(path: string): Promise<CacheEntry['summary']>
       // call's own "effort" (a subagent asked for low effort, say): take the last.
       const efforts = [...line.matchAll(EFFORT_RE)]
       if (efforts.length) effort = efforts[efforts.length - 1][1]
+      // message.usage's own counts come first; quoted text is escaped, so it can't match.
+      const tokens = TOKEN_KEYS.map((k) => Number(new RegExp(`"${k}":(\\d+)`).exec(line)?.[1] ?? NaN))
+      if (!Number.isNaN(tokens[0])) contextTokens = tokens.reduce((a, n) => a + (Number.isNaN(n) ? 0 : n), 0)
     }
     // Cheap pre-filter: transcripts are large and most lines are tool output.
     const interesting =
@@ -203,11 +208,13 @@ export async function parseSession(path: string): Promise<CacheEntry['summary']>
     worked: edited || prs.size > 0,
     turnEndedAt,
     model,
-    effort
+    effort,
+    contextTokens
   }
 }
 
 const MODEL_RE = /"model":"([^"]+)"/
+const TOKEN_KEYS = ['input_tokens', 'cache_creation_input_tokens', 'cache_read_input_tokens']
 const EFFORT_RE = /"effort":"([a-z]+)"/g
 
 // Assistant lines are parsed only when they may call one of these (most are long tool chatter).
