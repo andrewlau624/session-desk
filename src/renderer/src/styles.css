@@ -1559,6 +1559,18 @@ a:hover {
   font: 12px 'SF Mono', Menlo, monospace;
 }
 
+.check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 4px 0 10px;
+  font-size: 13px;
+}
+
+.check-row input {
+  margin-top: 2px;
+}
+
 .wt-confirm-list {
   max-height: 220px;
   overflow-y: auto;

@@ -227,6 +227,39 @@ export type PrBranch = Pick<TicketBranch, 'repo' | 'branch' | 'label'>
  */
 export type WorktreeVerdict = 'safe' | 'active' | 'blocked' | 'missing'
 
+/**
+ * A local branch, for the Branches view. safe: nothing would be lost (its PR
+ * is merged or closed and has every commit, or it's all in the default
+ * branch). active: still in use (an open PR, or pushed with no PR yet).
+ * blocked: deleting it would lose work, or it's checked out. protected: the
+ * default branch.
+ */
+export type BranchVerdict = 'safe' | 'active' | 'blocked' | 'protected'
+
+export interface BranchInfo {
+  /** Repo folder name, as in the Worktrees view. */
+  repo: string
+  repoPath: string
+  branch: string
+  /** Its tip; removal refuses if it has moved since. */
+  sha: string
+  ticket: string | null
+  /** The branch on origin it tracks, without "origin/"; null if none. */
+  upstream: string | null
+  /** It tracked a branch that's been deleted on GitHub. */
+  upstreamGone: boolean
+  /** The worktree (or main checkout) it's checked out in. */
+  checkedOutAt: string | null
+  pr: { number: number; state: 'OPEN' | 'MERGED' | 'CLOSED'; draft: boolean; url: string } | null
+  /** Commits that exist only here: not in its PR, its upstream, or the default branch. Null when that can't be told. */
+  unpushed: number | null
+  lastCommitAt: number
+  /** Sessions about its ticket, or that opened its PR. */
+  sessionIds: string[]
+  verdict: BranchVerdict
+  reason: string
+}
+
 /** A checkout whose branch (or worktree folder) names the ticket: where its work is happening. */
 export interface TicketBranch {
   /** Repo folder name under the workspace, e.g. api. */
@@ -257,6 +290,8 @@ export interface WorktreeInfo {
   path: string
   /** Path relative to the workspace when inside it. */
   label: string
+  /** The commit checked out when it was listed. */
+  head: string
   branch: string | null
   ticket: string | null
   missing: boolean
@@ -488,6 +523,10 @@ export interface DeskApi {
   openFolder(sessionId: string | null, how: 'finder' | 'terminal' | string): Promise<void>
   /** The models (and their efforts) Claude Code offers this account. */
   modelCatalog(): Promise<ModelCatalog>
+  /** Every local branch of every repo in the project, with its PR, sessions and a verdict. */
+  listBranches(): Promise<BranchInfo[]>
+  /** Deletes a listed local branch after re-checking it; resolves with its last commit, for restoring. */
+  removeBranch(repoPath: string, branch: string): Promise<string>
   /** Code editors installed in /Applications that can open a folder. */
   folderApps(): Promise<string[]>
   /** Sends a kickoff turn to a session open here and idle at its prompt; false if it isn't open. */
@@ -539,7 +578,8 @@ export interface DeskApi {
   /** Every extra worktree of every repo in the workspace; takes several seconds. */
   listWorktrees(): Promise<WorktreeInfo[]>
   /** Removes a worktree from the last listing (keeps its branch). */
-  removeWorktree(path: string): Promise<void>
+  /** Removes a listed worktree; with deleteBranch, also its branch when that loses nothing (its PR merged or closed). */
+  removeWorktree(path: string, deleteBranch?: boolean): Promise<{ branchDeleted: boolean }>
   /** Clears stale entries for a repo's missing worktrees. */
   pruneWorktrees(repoPath: string): Promise<void>
   /** Tells the main process which session is on screen, so it isn't notified about it. */

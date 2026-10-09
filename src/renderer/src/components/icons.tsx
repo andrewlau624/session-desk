@@ -80,6 +80,14 @@ export const BranchIcon = () => (
   </Icon>
 )
 
+/** Two checkouts of one repo: the Worktrees view. */
+export const WorktreeIcon = () => (
+  <Icon>
+    <path d="M2.5 5.5a1 1 0 0 1 1-1h2l1 1h3.5a1 1 0 0 1 1 1V10a1 1 0 0 1-1 1h-6.5a1 1 0 0 1-1-1z" />
+    <path d="M5.5 4.5V3.5a1 1 0 0 1 1-1h2l1 1h3a1 1 0 0 1 1 1V8a1 1 0 0 1-1 1h-1.5" />
+  </Icon>
+)
+
 export const FolderIcon = () => (
   <Icon size={14}>
     <path d="M2.5 4.5a1 1 0 0 1 1-1h2.6l1.4 1.5h5a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1z" />

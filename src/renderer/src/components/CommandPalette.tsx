@@ -90,6 +90,7 @@ export function CommandPalette({ sessions, linearConnected, onNav, onNewSession,
       { kind: 'view', key: 'v:new', label: 'New session', run: onNewSession },
       { kind: 'view', key: 'v:workflow', label: 'Workflow', run: () => onNav({ kind: 'workflow' }) },
       { kind: 'view', key: 'v:worktrees', label: 'Worktrees', run: () => onNav({ kind: 'worktrees' }) },
+      { kind: 'view', key: 'v:branches', label: 'Branches', run: () => onNav({ kind: 'branches' }) },
       { kind: 'view', key: 'v:artifacts', label: 'Artifacts', run: () => onNav({ kind: 'artifacts' }) }
     ].filter((v) => !terms.length || score((v as { label: string }).label, terms) > 0) as Item[]
     const live = sessions.filter((s) => !s.archived)

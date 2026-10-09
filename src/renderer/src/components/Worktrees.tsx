@@ -68,15 +68,17 @@ export function Worktrees({ actionsTarget, notify }: Props) {
 
   const safe = (list ?? []).filter((w) => w.verdict === 'safe')
 
-  const remove = async (targets: WorktreeInfo[]) => {
+  const remove = async (targets: WorktreeInfo[], deleteBranches: boolean) => {
     setConfirm(null)
     const failed: string[] = []
     const removed = new Set<string>()
+    let branches = 0
     for (const [i, w] of targets.entries()) {
       setBusy(`Removing ${i + 1} of ${targets.length}: ${w.label}`)
       try {
-        await window.desk.removeWorktree(w.path)
+        const r = await window.desk.removeWorktree(w.path, deleteBranches)
         removed.add(w.path)
+        if (r.branchDeleted) branches++
       } catch (e) {
         failed.push(`${w.label}: ${errorMessage(e)}`)
       }
@@ -84,7 +86,11 @@ export function Worktrees({ actionsTarget, notify }: Props) {
     setBusy(null)
     setList((l) => l?.filter((w) => !removed.has(w.path)) ?? l)
     if (failed.length) notify(`Removed ${removed.size}; ${failed.length} refused. ${failed[0]}`, 'error')
-    else notify(`Removed ${removed.size} worktree${removed.size === 1 ? '' : 's'}; branches kept`)
+    else
+      notify(
+        `Removed ${removed.size} worktree${removed.size === 1 ? '' : 's'}` +
+          (deleteBranches ? ` and ${branches} branch${branches === 1 ? '' : 'es'}` : '; branches kept')
+      )
   }
 
   const prune = async (repoPath: string) => {
@@ -207,9 +213,12 @@ function ConfirmRemove({
 }: {
   confirm: Confirm
   onCancel: () => void
-  onConfirm: (targets: WorktreeInfo[]) => void
+  onConfirm: (targets: WorktreeInfo[], deleteBranches: boolean) => void
 }) {
   const targets = confirm.kind === 'one' ? [confirm.w] : confirm.list
+  // Only branches whose PR is merged or closed (every commit in it); others are always kept.
+  const finished = targets.filter((w) => w.verdict === 'safe' && w.branch && (w.pr?.state === 'MERGED' || w.pr?.state === 'CLOSED'))
+  const [deleteBranches, setDeleteBranches] = useState(false)
   const withIgnored = targets.filter((w) => w.notableIgnored.length)
   const ignoredNames = [...new Set(withIgnored.flatMap((w) => w.notableIgnored))]
   return (
@@ -224,8 +233,15 @@ function ConfirmRemove({
           {confirm.kind === 'one'
             ? `${confirm.w.reason}. `
             : 'Each has a merged or closed PR, or no commits of its own, and nothing uncommitted or unpushed. '}
-          The folders are deleted with <code>git worktree remove</code>, which refuses anything with changes. Branches are kept.
+          The folders are deleted with <code>git worktree remove</code>, which refuses anything with changes.
         </p>
+        {finished.length > 0 && (
+          <label className="check-row">
+            <input type="checkbox" checked={deleteBranches} onChange={(e) => setDeleteBranches(e.target.checked)} />
+            Also delete {finished.length === targets.length ? (targets.length === 1 ? 'its' : 'their') : `the ${finished.length}`} local
+            branch{finished.length === 1 ? '' : 'es'} whose PR is merged or closed (GitHub&rsquo;s are untouched)
+          </label>
+        )}
         {confirm.kind === 'one' && confirm.w.verdict === 'active' && (
           <p className="warn">Its PR or branch is still active upstream. Everything is pushed, so you can add it back later.</p>
         )}
@@ -249,7 +265,7 @@ function ConfirmRemove({
           <button className="btn" autoFocus onClick={onCancel}>
             Cancel
           </button>
-          <button className="btn btn-danger" onClick={() => onConfirm(targets)}>
+          <button className="btn btn-danger" onClick={() => onConfirm(targets, deleteBranches)}>
             Remove{confirm.kind === 'bulk' ? ` ${targets.length}` : ''}
           </button>
         </div>

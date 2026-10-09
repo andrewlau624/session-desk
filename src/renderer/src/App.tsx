@@ -7,6 +7,7 @@ import { SessionMenu } from './components/SessionMenu'
 import { Sidebar, type Nav } from './components/Sidebar'
 import { Terminal } from './components/Terminal'
 import { Worktrees } from './components/Worktrees'
+import { Branches } from './components/Branches'
 import { CommandPalette } from './components/CommandPalette'
 import { SettingsDialog } from './components/SettingsDialog'
 import { Artifacts } from './components/Artifacts'
@@ -386,6 +387,8 @@ export function App() {
             <h1 className="topbar-title">
               {nav.kind === 'workflow'
                 ? 'Workflow'
+                : nav.kind === 'branches'
+                  ? 'Branches'
                 : nav.kind === 'worktrees'
                   ? 'Worktrees'
                   : nav.kind === 'artifacts'
@@ -418,6 +421,9 @@ export function App() {
         )}
 
         {nav.kind === 'worktrees' && <Worktrees actionsTarget={topbarActions} notify={notify} />}
+        {nav.kind === 'branches' && (
+          <Branches actionsTarget={topbarActions} notify={notify} onOpenSession={(id) => setNav({ kind: 'session', id })} />
+        )}
         {nav.kind === 'artifacts' && (
           <Artifacts sessions={sessions} notify={notify} onOpenSession={(id) => setNav({ kind: 'session', id })} />
         )}

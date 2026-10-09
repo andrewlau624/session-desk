@@ -241,7 +241,20 @@ The Worktrees view lists every extra worktree of every repo directly under the w
 | Has work | Uncommitted changes, unpushed commits, unverifiable, or a process has its working directory inside | none |
 | Missing | Folder gone; git still lists it | Clear stale entries (`git worktree prune`) |
 
-Because PRs are squash-merged, "pushed" means no local commits beyond the PR's last head commit (or the remote branch, or the default branch if never pushed). Removal re-checks the worktree first, then runs `git worktree remove` without `--force`. Git itself refuses anything with changes. Branches are kept. The confirmation names any ignored files that aren't build output (`.env`, local settings), since removing the folder deletes them. A full check of ~60 worktrees takes about 20 seconds.
+Because PRs are squash-merged, "pushed" means no local commits beyond the PR's last head commit (or the remote branch, or the default branch if never pushed). Removal re-checks the worktree first, then runs `git worktree remove` without `--force`. Git itself refuses anything with changes. Branches are kept unless you tick the option to delete those whose PR is merged or closed (see Branches). The confirmation names any ignored files that aren't build output (`.env`, local settings), since removing the folder deletes them. A full check of ~60 worktrees takes about 20 seconds.
+
+## Branches
+
+The Branches view lists every local branch of every repo in the project, with its ticket, PR, sessions, where it's checked out, and whether it's still on GitHub. Each gets a verdict:
+
+- **Safe**: its PR is merged or closed and has every one of its commits (squash merges leave merged branches looking unmerged to git, so the PR is what tells), or, without a PR, all its commits are already in the default branch.
+- **Active**: an open PR, or pushed with no PR yet.
+- **Has work**: commits that exist only on this Mac or aren't in its PR, or it's checked out in a worktree.
+- **Default**: the repo's default branch; never deleted.
+
+**Delete N safe…** deletes those local branches after a confirmation listing them. Each is re-checked first (its tip must not have moved, and it must not be checked out now). Only branches on this Mac are deleted; GitHub's are untouched. git keeps the commits for about 90 days, so a deleted branch can be restored with `git branch <name> <commit>`.
+
+Removing a worktree can also delete its branch (a checkbox in the confirmation, off by default), only when the branch's PR is merged or closed and it still points where the worktree was.
 
 ## Concurrency
 

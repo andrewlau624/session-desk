@@ -27,6 +27,7 @@ import { searchTranscripts } from './search'
 import { listArtifacts } from './artifacts'
 import { KICKOFFS, kickoffPrompt, ticketBrief, validPrBranch } from './ticketBrief'
 import { listWorktreesCached, pruneWorktrees, removeWorktree, ticketBranches } from './worktrees'
+import { listBranches, removeBranch } from './branches'
 
 // One state folder for dev and the installed app (whose name differs), so
 // groups, pins and links carry over. Set before the single-instance lock,
@@ -351,7 +352,7 @@ ipcMain.handle('worktrees:list', () => {
   const ws = workspace()
   return ws ? listWorktreesCached(ws) : []
 })
-ipcMain.handle('worktrees:remove', (_e, path: string) => removeWorktree(String(path)))
+ipcMain.handle('worktrees:remove', (_e, path: string, deleteBranch?: boolean) => removeWorktree(String(path), deleteBranch === true))
 // The session view asks on every sessions change (often, mid-turn); a few
 // seconds' reuse keeps that to a handful of local git calls.
 const branchCache = new Map<string, { at: number; result: Promise<TicketBranch[]> }>()
@@ -371,6 +372,17 @@ ipcMain.handle('worktrees:forTicket', (_e, ticket: string, heads: unknown) => {
 })
 const BRANCH_CACHE_MS = 3000
 ipcMain.handle('worktrees:prune', (_e, repoPath: string) => pruneWorktrees(String(repoPath)))
+ipcMain.handle('branches:list', async () => {
+  const ws = workspace()
+  if (!ws) return []
+  const [list, ss] = await Promise.all([listBranches(ws), sessions()])
+  // Its sessions: about its ticket, or the one that opened its PR.
+  return list.map((b) => ({
+    ...b,
+    sessionIds: ss.filter((s) => (b.ticket && s.tickets[0] === b.ticket) || (b.pr && s.prs.some((p) => p.url === b.pr!.url))).map((s) => s.id)
+  }))
+})
+ipcMain.handle('branches:remove', (_e, repoPath: string, branch: string) => removeBranch(String(repoPath), String(branch)))
 
 /**
  * Remembers the connected workspace (links, offline use) and detects tickets

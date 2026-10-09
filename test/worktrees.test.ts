@@ -17,6 +17,7 @@ const base = (over: Partial<WorktreeInfo>): Omit<WorktreeInfo, 'verdict' | 'reas
   repoPath: '/r',
   path: '/r-wt/eng-1',
   label: 'r-wt/eng-1',
+  head: 'h'.repeat(40),
   branch: 'me/eng-1',
   ticket: 'ENG-1',
   missing: false,
@@ -132,7 +133,9 @@ describe('listing and removing real worktrees', () => {
     await expect(removeWorktree(fresh)).rejects.toThrow('It has uncommitted changes now')
     rmSync(join(fresh, 'later.txt'))
 
-    await removeWorktree(pushed)
+    // Asked to delete its branch too, but there's no merged or closed PR: the branch is kept.
+    expect(await removeWorktree(pushed, true)).toEqual({ branchDeleted: false })
+    expect(git(repo, 'branch', '--list', 'me/eng-9001').trim()).toContain('me/eng-9001')
     expect(existsSync(pushed)).toBe(false)
     await removeWorktree(fresh)
     expect(existsSync(fresh)).toBe(false)

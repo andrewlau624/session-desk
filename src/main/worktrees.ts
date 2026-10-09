@@ -14,7 +14,7 @@ export const REGENERABLE =
   /(^|\/)(node_modules|\.venv|venv|__pycache__|\.pytest_cache|\.ruff_cache|\.mypy_cache|\.hypothesis|\.next|\.turbo|\.cache|coverage|dist|build|out|htmlcov|\.tox|models--[^/]+)\/?$|\.(tsbuildinfo|so|coverage)$|(^|\/)next-env\.d\.ts$/
 
 // A worktree this new with no commits of its own is probably about to be used.
-const NEW_WORKTREE_MS = 14 * 24 * 3600_000
+export const NEW_WORKTREE_MS = 14 * 24 * 3600_000
 
 interface RunResult {
   ok: boolean
@@ -31,9 +31,9 @@ async function run(cmd: string, args: string[], cwd?: string): Promise<RunResult
   )
 }
 
-const git = (dir: string, ...args: string[]) => run('git', ['-C', dir, ...args])
+export const git = (dir: string, ...args: string[]) => run('git', ['-C', dir, ...args])
 
-async function mapLimit<T, R>(items: T[], limit: number, fn: (t: T) => Promise<R>): Promise<R[]> {
+export async function mapLimit<T, R>(items: T[], limit: number, fn: (t: T) => Promise<R>): Promise<R[]> {
   const out: R[] = new Array(items.length)
   let next = 0
   await Promise.all(
@@ -108,7 +108,7 @@ async function cwdUsers(): Promise<{ path: string; command: string }[]> {
   return users
 }
 
-interface PrRef {
+export interface PrRef {
   number: number
   state: 'OPEN' | 'MERGED' | 'CLOSED'
   draft: boolean
@@ -117,7 +117,7 @@ interface PrRef {
 }
 
 /** The most relevant PR per branch (open, else merged, else closed), batched per repo. */
-async function prsForBranches(slug: string, branches: string[]): Promise<Map<string, PrRef>> {
+export async function prsForBranches(slug: string, branches: string[]): Promise<Map<string, PrRef>> {
   const found = new Map<string, PrRef>()
   const [owner, name] = slug.split('/')
   const NAME_RE = /^[\w.-]+$/
@@ -240,6 +240,7 @@ export async function listWorktrees(workspace: string): Promise<WorktreeInfo[]> 
       repoPath: repo,
       path: w.path,
       label: worktreeLabel(repo, w.path),
+      head: w.head,
       branch: w.branch,
       ticket: ticketsIn(w.branch ?? '')[0] ?? ticketsIn(w.path)[0] ?? null,
       missing: !exists,
@@ -338,7 +339,7 @@ export async function listWorktreesCached(workspace: string): Promise<WorktreeIn
  * refuses uncommitted or untracked changes and locked worktrees. The branch
  * is kept.
  */
-export async function removeWorktree(path: string): Promise<void> {
+export async function removeWorktree(path: string, deleteBranch = false): Promise<{ branchDeleted: boolean }> {
   const w = listed.get(path)
   if (!w) throw new Error('Refresh the list first')
   if (w.verdict === 'blocked' || w.verdict === 'missing') throw new Error(w.reason)
@@ -350,6 +351,15 @@ export async function removeWorktree(path: string): Promise<void> {
   const r = await git(w.repoPath, 'worktree', 'remove', w.path)
   if (!r.ok) throw new Error(r.err.trim() || `git refused to remove ${w.label}`)
   listed.delete(path)
+  // Its branch too, only when that loses nothing: its PR is merged or closed
+  // (the verdict already required every commit to be in it), and the branch
+  // still points where the worktree was.
+  const finished = w.verdict === 'safe' && (w.pr?.state === 'MERGED' || w.pr?.state === 'CLOSED')
+  if (!deleteBranch || !w.branch || !finished) return { branchDeleted: false }
+  const tip = await git(w.repoPath, 'rev-parse', '--verify', '--quiet', `refs/heads/${w.branch}`)
+  if (!tip.ok || tip.out.trim() !== w.head) return { branchDeleted: false }
+  const d = await git(w.repoPath, 'branch', '-D', '--', w.branch)
+  return { branchDeleted: d.ok }
 }
 
 /** Clears git's records of worktrees whose folders are gone; touches no files. */

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import type { LinearStatus, PrFocus, SessionGroup, SessionSummary } from '../../../shared/types'
 import { errorMessage, timeAgo } from '../format'
 import { coreSessionEntries, type SessionActionHandlers } from '../sessionActions'
-import { ArtifactIcon, BoardIcon, BranchIcon, ChevronIcon, FolderPlusIcon, LinkIcon, MoreIcon, PlusIcon, SearchIcon } from './icons'
+import { ArtifactIcon, BoardIcon, BranchIcon, WorktreeIcon, ChevronIcon, FolderPlusIcon, LinkIcon, MoreIcon, PlusIcon, SearchIcon } from './icons'
 import { PopupMenu, type MenuEntry } from './PopupMenu'
 import { RenameField } from './SessionMenu'
 
@@ -12,6 +12,7 @@ export type Nav =
   | { kind: 'session'; id: string; focus?: PrFocus }
   | { kind: 'workflow' }
   | { kind: 'worktrees' }
+  | { kind: 'branches' }
   | { kind: 'artifacts' }
 
 interface Props {
@@ -314,8 +315,15 @@ export function Sidebar(props: Props) {
           className={`nav-row ${nav.kind === 'worktrees' ? 'active' : ''}`}
           onClick={() => onNav({ kind: 'worktrees' })}
         >
-          <BranchIcon />
+          <WorktreeIcon />
           Worktrees
+        </button>
+        <button
+          className={`nav-row ${nav.kind === 'branches' ? 'active' : ''}`}
+          onClick={() => onNav({ kind: 'branches' })}
+        >
+          <BranchIcon />
+          Branches
         </button>
         <button
           className={`nav-row ${nav.kind === 'artifacts' ? 'active' : ''}`}
