@@ -1,16 +1,30 @@
 #!/usr/bin/env node
-// Copies the built app to ~/Applications/Session Desk.app (no admin rights needed).
+// Copies the built app to /Applications/Session Desk.app, or to ~/Applications
+// when this user can't write /Applications (not an admin).
 // Run via `npm run install-app`, which builds first.
 
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, rmSync } from 'node:fs'
+import { accessSync, constants, existsSync, mkdirSync, rmSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
 const NAME = 'Session Desk.app'
 const built = join('dist', 'mac-arm64', NAME)
-const appsDir = join(homedir(), 'Applications')
+const SYSTEM_APPS = '/Applications'
+const USER_APPS = join(homedir(), 'Applications')
+const writable = (dir) => {
+  try {
+    accessSync(dir, constants.W_OK)
+    return true
+  } catch {
+    return false
+  }
+}
+const appsDir = writable(SYSTEM_APPS) ? SYSTEM_APPS : USER_APPS
 const target = join(appsDir, NAME)
+// A copy left in the other folder (say, from before installs went to /Applications):
+// removed below so Spotlight and Launchpad find only one Session Desk.
+const other = join(appsDir === SYSTEM_APPS ? USER_APPS : SYSTEM_APPS, NAME)
 
 if (!existsSync(built)) {
   console.error(`No build at ${built}. Run \`npm run dist\` first.`)
@@ -18,16 +32,18 @@ if (!existsSync(built)) {
 }
 
 // Replacing a running app's bundle out from under it breaks it.
-const running = (() => {
+const runningFrom = (app) => {
   try {
-    return execFileSync('pgrep', ['-f', `${target}/Contents/MacOS/`], { encoding: 'utf8' }).trim()
+    return execFileSync('pgrep', ['-f', `${app}/Contents/MacOS/`], { encoding: 'utf8' }).trim() !== ''
   } catch {
-    return ''
+    return false
   }
-})()
-if (running) {
-  console.error('Session Desk is running from ~/Applications. Quit it (⌘Q), then run this again.')
-  process.exit(1)
+}
+for (const app of [target, other]) {
+  if (existsSync(app) && runningFrom(app)) {
+    console.error(`Session Desk is running from ${app}. Quit it (⌘Q), then run this again.`)
+    process.exit(1)
+  }
 }
 
 // A stable signing identity keeps the app's code identity the same across
@@ -66,3 +82,7 @@ if (existsSync(target) && target.endsWith(`/Applications/${NAME}`)) rmSync(targe
 execFileSync('ditto', [built, target])
 execFileSync('codesign', ['--verify', '--deep', target])
 console.log(`Installed ${target}`)
+if (existsSync(other) && writable(join(other, '..'))) {
+  rmSync(other, { recursive: true })
+  console.log(`Removed the old copy at ${other}`)
+}
