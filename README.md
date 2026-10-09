@@ -161,42 +161,6 @@ A killed process sends no `SessionEnd`, so a status only counts while a process 
 
 Clicking a card opens its most recent linked session, or starts a new one named `ENG-123 <title>` and linked to the ticket.
 
-### Jump to anything (⌘K)
-
-⌘K (or the sidebar's search icon) opens a palette over everything: views, sessions (by title, ticket or folder), sprint tickets (opens the ticket's session or starts one), and **conversations**: every word you type must appear in one of your prompts or Claude's replies, in any session. ⌘1–9 open pinned sessions in sidebar order.
-
-Conversation search covers prompts and replies only, not tool output: about 7 MB of text across ~100 transcripts (≈300 MB on disk). The index builds on first search (~1 s) and then updates per changed transcript; each search takes a few milliseconds, so results update as you type.
-
-## Artifacts
-
-The Artifacts view lists every claude.ai artifact a session published (the `Artifact` tool, or a connector such as Claude Docs creating one) or opened, newest first and merged by link: title (the published file's name or the doc's name), the one-line description from the latest publish, the tickets it relates to (named in it, or its sessions' tickets), the sessions it came from (click to open), and **Open ↗**. Links only *mentioned* in tool output (a grep, say) don't count. Each artifact's menu can **remove it from the list** (restore from "Show removed") or **delete it on claude.ai**: the app can't delete artifacts itself, so that opens it on claude.ai to delete there, and removes it from the list. Built from transcripts on first view (~1 s), then cached per transcript.
-
-## Ticket context
-
-Under the ticket, the session view lists what else exists about it:
-
-- **Evidence**: folders in the project's context folder (`contextFolder`, `evidence/` by default) named for the ticket (any case: `ENG-123`, `eng-456`) or for one of the session's PRs (`PR-9107`), with file count and last change. Click to open in Finder.
-- **Memory notes**: Claude Code memory notes (`~/.claude/projects/*/memory/*.md`) that mention the ticket. Notes named for it come first, then by number of mentions, with each note's one-line description. Click to open in your default editor. The `MEMORY.md` index and temp-folder projects are skipped.
-
-Only those two kinds of path can be opened from here: folders inside the context folder, and `.md` files inside a memory folder (symlinks are judged by their target), so a click can never launch a program.
-
-## PR status
-
-Open PRs show checks, review decision, unresolved review threads and Greptile's standing, in the session's PR panel and (only what needs attention) on board cards. Where Greptile's automatic reviews are off, it reviews only when asked, and its summary goes stale as commits land:
-
-| Greptile | Meaning |
-|---|---|
-| up to date | its summary's *Last reviewed commit* is the PR head |
-| N commits behind / reviewed an older version | commits landed since; "older version" when the branch was rebased and the reviewed commit is gone |
-| review requested | an `@greptileai review` comment is newer than its last summary |
-| not reviewed | no summary; a `<!-- greptile-status -->` notice alone is not a review |
-
-**Unpushed commits.** Each open PR is compared with the local worktree (or main checkout) on its branch. Local commits the PR on GitHub doesn't have show as "N local commits not pushed" (and "N unpushed" on board cards); commits on GitHub missing locally show quietly as "N newer on GitHub". If the PR's head was never fetched here, it says "Local branch differs from the PR" instead of guessing. Comparisons are cached by commit pair and re-run at most every 15 seconds.
-
-**Merged vs. deployed.** For PRs merged in the last 30 days, the panel says where they are live: "In prod", "On staging, not in prod yet", or "Not deployed yet" (board cards show only "Not in prod"). What each environment runs comes from the project's `.session-desk.json` (`deploy`, see [Project settings](#project-settings-session-deskjson)); a PR is live there when that release contains its merge commit (GitHub's compare API; nothing is fetched locally). Repos the file doesn't list show nothing. Releases are re-read every 5 minutes; a "live" answer is final.
-
-Greptile shows only on PRs where it has posted something (a review, or a "reviews are disabled" notice), i.e. repos it's installed on; elsewhere the PR line says nothing about it. **Ask Greptile to review** posts exactly `@greptileai review` as you, after a confirmation, and only on open PRs. Statuses refresh every 5 minutes, and immediately after asking.
-
 ## Worktrees for ticket sessions
 
 A session started from a card is briefed through `--append-system-prompt` (`src/main/ticketBrief.ts`) with the ticket's title, link and description. The brief tells Claude to work out which repos the change belongs in, then for each one create or reuse a worktree at the project's `worktrees` layout (default `<repo>-wt/<ticket>`, beside each repo) on Linear's suggested branch (e.g. `me/eng-123`), cut from a freshly fetched default branch. When the project folder is itself a single repo, there's no choosing: its worktree goes beside it (`api-wt/eng-123` next to `api`). Every edit, build and test happens there; main checkouts are left alone. Nothing is created until Claude starts on the work, and repos it only reads get no worktree.
@@ -258,7 +222,7 @@ Open PRs show checks, review decision, unresolved review threads and Greptile's 
 
 **Merged vs. deployed.** For PRs merged in the last 30 days, the panel says where they are live: "In prod", "On staging, not in prod yet", or "Not deployed yet" (board cards show only "Not in prod"). What each environment runs comes from the project's `.session-desk.json` (`deploy`, see [Project settings](#project-settings-session-deskjson)); a PR is live there when that release contains its merge commit (GitHub's compare API; nothing is fetched locally). Repos the file doesn't list show nothing. Releases are re-read every 5 minutes; a "live" answer is final.
 
-**Ask Greptile to review** posts exactly `@greptileai review` as you, after a confirmation, and only on open PRs. Statuses refresh every 5 minutes, and immediately after asking.
+Greptile shows only on PRs where it has posted something (a review, or a "reviews are disabled" notice), i.e. repos it's installed on; elsewhere the PR line says nothing about it. **Ask Greptile to review** posts exactly `@greptileai review` as you, after a confirmation, and only on open PRs. Statuses refresh every 5 minutes, and immediately after asking.
 
 ## Worktrees
 
