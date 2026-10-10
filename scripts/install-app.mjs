@@ -48,9 +48,11 @@ for (const app of [target, ...(mine(legacy) ? [legacy] : [])]) {
 // A stable signing identity keeps the app's code identity the same across
 // builds, so macOS stops re-asking for Keychain access to the saved Linear
 // key. Without one, the build keeps electron-builder's ad-hoc signature,
-// which changes every time. Picked, in order: SESSION_DESK_SIGNING_IDENTITY,
-// a "Developer ID Application" identity, a self-signed "Session Desk Local
-// Signing" certificate.
+// which changes every time, and also loses the app's macOS privacy grants
+// (Documents folder access, which sessions in ~/Documents need). Picked, in
+// order: SESSION_DESK_SIGNING_IDENTITY, a "Developer ID Application" identity,
+// an "Apple Development" identity, a self-signed "Session Desk Local Signing"
+// certificate.
 const names = (() => {
   try {
     const out = execFileSync('security', ['find-identity', '-v', '-p', 'codesigning'], { encoding: 'utf8' })
@@ -62,7 +64,9 @@ const names = (() => {
 const wanted = process.env.SESSION_DESK_SIGNING_IDENTITY
 const identity = wanted
   ? names.find((n) => n === wanted)
-  : (names.find((n) => n.startsWith('Developer ID Application:')) ?? names.find((n) => n === 'Session Desk Local Signing'))
+  : (names.find((n) => n.startsWith('Developer ID Application:')) ??
+    names.find((n) => n.startsWith('Apple Development:')) ??
+    names.find((n) => n === 'Session Desk Local Signing'))
 if (wanted && !identity) {
   console.error(`No valid code-signing identity named "${wanted}".`)
   process.exit(1)
@@ -71,7 +75,7 @@ if (identity) {
   execFileSync('codesign', ['--force', '--deep', '--sign', identity, built], { stdio: 'inherit' })
   console.log(`Signed with "${identity}"`)
 } else {
-  console.log('No signing identity found; keeping the ad-hoc signature (macOS will re-ask for Keychain access).')
+  console.log('No signing identity found; keeping the ad-hoc signature (macOS will re-ask for Keychain access and Documents access).')
 }
 
 mkdirSync(appsDir, { recursive: true })
