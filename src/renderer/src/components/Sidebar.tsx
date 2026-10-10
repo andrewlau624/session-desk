@@ -195,7 +195,7 @@ export function Sidebar(props: Props) {
             e.dataTransfer.setData(DRAG_TYPE, s.id)
             e.dataTransfer.effectAllowed = 'move'
           }}
-          onClick={() => onNav(isActive ? { kind: 'new' } : { kind: 'session', id: s.id })}
+          onClick={() => onNav({ kind: 'session', id: s.id })}
           onKeyDown={(e) => e.key === 'Enter' && onNav({ kind: 'session', id: s.id })}
           onContextMenu={(e) => {
             e.preventDefault()
