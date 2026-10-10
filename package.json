@@ -63,7 +63,12 @@
       "icon": "build/icon.icns",
       "category": "public.app-category.developer-tools",
       "identity": "-",
-      "hardenedRuntime": false
+      "hardenedRuntime": false,
+      "extendInfo": {
+        "NSDocumentsFolderUsageDescription": "Session Desk runs Claude Code sessions in your project folders, which may be in Documents.",
+        "NSDesktopFolderUsageDescription": "Session Desk runs Claude Code sessions in your project folders, which may be on the Desktop.",
+        "NSDownloadsFolderUsageDescription": "Session Desk runs Claude Code sessions in your project folders, which may be in Downloads."
+      }
     },
     "extraResources": [
       {
