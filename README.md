@@ -33,6 +33,10 @@ Only one copy runs at a time: launching a second (say, the installed app while `
 
 To try a change without quitting the installed app, give the dev copy its own state folder: `SESSION_DESK_DATA_DIR=/tmp/sd-test npm run dev`. It runs beside the app with fresh settings (it asks for a projects folder and a Linear key); don't open a session in both at once.
 
+### Versioning
+
+The version lives in `package.json` and follows [semver](https://semver.org): each rebuild that's installed gets a new one, bumped before `npm run install-app`. While it's 0.x: a new feature or a change in behaviour bumps the minor version (0.1.0 → 0.2.0), a fix or other small change bumps the patch (0.2.0 → 0.2.1). `npm version minor --no-git-tag-version` (or `patch`) edits `package.json` and the lockfile. Settings and Session Desk → About show the running version; `install-app` prints the version it installed and warns when it's the one already installed.
+
 ### Badge and notifications
 
 The Dock badge counts open sessions waiting on you. When one starts waiting, a notification says why (finished its turn, needs an answer or permission, stopped with an error); clicking it opens that session. You're not notified about the session on screen in a focused window. By default you're also not notified for sessions open in Claude desktop or a terminal, which notify on their own; "Include Sessions Open in Other Apps" turns those on. macOS asks once whether Session Desk may send notifications.

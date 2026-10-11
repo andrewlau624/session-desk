@@ -4,7 +4,7 @@
 // Run via `npm run install-app`, which builds first.
 
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, rmSync, statSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
@@ -78,13 +78,29 @@ if (identity) {
   console.log('No signing identity found; keeping the ad-hoc signature (macOS will re-ask for Keychain access and Documents access).')
 }
 
+// Every rebuild gets its own version (semver, in package.json): say so when
+// this one would replace an install of the same version.
+const { version } = JSON.parse(readFileSync('package.json', 'utf8'))
+const installedVersion = (() => {
+  try {
+    return execFileSync('defaults', ['read', join(target, 'Contents', 'Info.plist'), 'CFBundleShortVersionString'], {
+      encoding: 'utf8'
+    }).trim()
+  } catch {
+    return null
+  }
+})()
+if (installedVersion === version) {
+  console.warn(`Note: ${version} is already installed. Bump the version in package.json for each rebuild (see Versioning in the README).`)
+}
+
 mkdirSync(appsDir, { recursive: true })
 // Only ever the previous copy of this app.
 if (existsSync(target) && target.endsWith(`/Applications/${NAME}`)) rmSync(target, { recursive: true })
 // ditto keeps the bundle's signature and extended attributes intact.
 execFileSync('ditto', [built, target])
 execFileSync('codesign', ['--verify', '--deep', target])
-console.log(`Installed ${target}`)
+console.log(`Installed Session Desk ${version}${installedVersion && installedVersion !== version ? ` (was ${installedVersion})` : ''} at ${target}`)
 if (existsSync(legacy)) {
   if (mine(legacy)) {
     rmSync(legacy, { recursive: true })

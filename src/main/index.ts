@@ -728,6 +728,8 @@ void store.adoptLegacyLinear(workspace())
 setTicketKeys(store.linearWorkspace(workspace())?.teamKeys ?? [])
 
 app.whenReady().then(() => {
+  // About shows "Version 0.1.0", from package.json, without a separate build number.
+  app.setAboutPanelOptions({ applicationVersion: app.getVersion(), version: '' })
   installMenu()
   createWindow()
   // Learn the team's own Linear rules, so the menu can say which of ours they already cover.

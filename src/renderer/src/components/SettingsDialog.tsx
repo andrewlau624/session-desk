@@ -152,6 +152,7 @@ export function SettingsDialog({ linear, onManageLinear, onClose, notify }: Prop
           </>
         )}
         <div className="modal-actions">
+          <span className="app-version muted">Session Desk {__APP_VERSION__}</span>
           <button className="btn btn-primary" onClick={onClose}>
             Done
           </button>
