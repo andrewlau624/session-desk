@@ -31,6 +31,8 @@ interface Props {
   /** Sessions running here: idle ones can restart onto the new route; busy ones are left alone. */
   open: { idle: number; busy: number }
   onRestartIdle: () => Promise<number>
+  /** The session terminals' text size (View → Bigger/Smaller Text). */
+  fontSize: number
   onClose: () => void
 }
 
@@ -38,8 +40,9 @@ interface Props {
  * Runs one NerfGuard command in a terminal you can type into: sign-in asks
  * for your email, a code and a password, and enable can ask questions too.
  */
-export function NerfguardPanel({ action, open, onRestartIdle, onClose }: Props) {
+export function NerfguardPanel({ action, open, onRestartIdle, fontSize, onClose }: Props) {
   const host = useRef<HTMLDivElement>(null)
+  const term = useRef<{ xterm: XTerm; fit: FitAddon } | null>(null)
   const [code, setCode] = useState<number | null>(null)
   const [after, setAfter] = useState<NerfguardStatus | null>(null)
   const [restarted, setRestarted] = useState<number | null>(null)
@@ -50,7 +53,7 @@ export function NerfguardPanel({ action, open, onRestartIdle, onClose }: Props) 
     if (!confirmed) return
     const xterm = new XTerm({
       fontFamily: '"SF Mono", Menlo, monospace',
-      fontSize: 12,
+      fontSize,
       lineHeight: 1.15,
       cursorBlink: true,
       macOptionIsMeta: true,
@@ -80,7 +83,9 @@ export function NerfguardPanel({ action, open, onRestartIdle, onClose }: Props) 
       setCode(-1)
     })
     xterm.focus()
+    term.current = { xterm, fit }
     return () => {
+      term.current = null
       offData()
       offExit()
       input.dispose()
@@ -90,6 +95,17 @@ export function NerfguardPanel({ action, open, onRestartIdle, onClose }: Props) 
     // One panel runs one command, once confirmed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [confirmed])
+
+  useEffect(() => {
+    const t = term.current
+    if (!t || t.xterm.options.fontSize === fontSize) return
+    t.xterm.options.fontSize = fontSize
+    try {
+      t.fit.fit()
+    } catch {
+      // Not laid out yet.
+    }
+  }, [fontSize])
 
   const running = confirmed && code === null
   const close = () => {

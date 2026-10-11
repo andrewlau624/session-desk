@@ -6,6 +6,8 @@ import { SessionHeader } from './components/SessionHeader'
 import { SessionMenu } from './components/SessionMenu'
 import { Sidebar, type Nav } from './components/Sidebar'
 import { SidebarResizer, useSidebarWidth } from './components/SidebarResizer'
+import { clampFont, loadFontSize, saveFontSize } from './termFont'
+import { TextSizeButton } from './components/TextSizeButton'
 import { Terminal } from './components/Terminal'
 import { Worktrees } from './components/Worktrees'
 import { Branches } from './components/Branches'
@@ -153,6 +155,13 @@ export function App() {
   useEffect(() => window.desk.onNavigateToSession((id) => setNav({ kind: 'session', id })), [])
   useEffect(() => window.desk.onNotice((text) => notify(text)), [notify])
   useEffect(() => window.desk.onOpenSettings(() => setShowSettings(true)), [])
+  // Text size of every session terminal, from the footer's Aa control.
+  const [fontSize, setFontSizeState] = useState(loadFontSize)
+  const setFontSize = (size: number) => {
+    const next = clampFont(size)
+    setFontSizeState(next)
+    saveFontSize(next)
+  }
 
   // Folders changed in Settings: re-read the projects folder, and replace an
   // unused new-session terminal so it starts in the new one.
@@ -541,6 +550,7 @@ export function App() {
               kickoff={t.kickoff}
               prBranch={t.prBranch}
               visible={t.id === activeTermId}
+              fontSize={fontSize}
               onExit={() => markExited(t.id)}
             />
           ))}
@@ -568,6 +578,7 @@ export function App() {
               onChoose={(mode) => chooseMode(activeTermId, mode)}
             />
             <span className="footer-spacer" />
+            <TextSizeButton size={fontSize} onChange={setFontSize} />
             <ModelPicker
               session={nav.kind === 'session' ? (selected ?? null) : null}
               launch={(nav.kind === 'session' ? selected?.launch : null) ?? launchChoice[activeTermId] ?? null}
@@ -630,6 +641,7 @@ export function App() {
           action={nerfguardAction}
           open={openForRoute}
           onRestartIdle={restartIdle}
+          fontSize={fontSize}
           onClose={() => setNerfguardAction(null)}
         />
       )}

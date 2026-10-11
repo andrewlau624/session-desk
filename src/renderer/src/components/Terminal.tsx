@@ -17,6 +17,7 @@ interface Props {
   kickoff?: Kickoff
   prBranch?: PrBranch
   visible: boolean
+  fontSize: number
   onExit: (code: number) => void
 }
 
@@ -35,7 +36,7 @@ export function themeFromCss(): Record<string, string> {
  * One live `claude` process. Mounted once and kept mounted (hidden when not
  * active) so switching sessions never restarts or interrupts a running one.
  */
-export function Terminal({ sessionId, resume, cwd, name, ticket, kickoff, prBranch, visible, onExit }: Props) {
+export function Terminal({ sessionId, resume, cwd, name, ticket, kickoff, prBranch, visible, fontSize, onExit }: Props) {
   const host = useRef<HTMLDivElement>(null)
   const fit = useRef<FitAddon | null>(null)
   const term = useRef<XTerm | null>(null)
@@ -46,7 +47,7 @@ export function Terminal({ sessionId, resume, cwd, name, ticket, kickoff, prBran
   useEffect(() => {
     const xterm = new XTerm({
       fontFamily: '"SF Mono", Menlo, monospace',
-      fontSize: 12,
+      fontSize,
       lineHeight: 1.15,
       cursorBlink: true,
       allowProposedApi: true,
@@ -108,6 +109,20 @@ export function Terminal({ sessionId, resume, cwd, name, ticket, kickoff, prBran
     // A terminal is bound to one session for its lifetime.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId])
+
+  // A new size changes how many rows and columns fit; refitting tells claude.
+  useEffect(() => {
+    const xterm = term.current
+    if (!xterm || xterm.options.fontSize === fontSize) return
+    xterm.options.fontSize = fontSize
+    if (host.current?.offsetParent !== null) {
+      try {
+        fit.current?.fit()
+      } catch {
+        // Not laid out; fitted when shown.
+      }
+    }
+  }, [fontSize])
 
   useEffect(() => {
     if (!visible) return

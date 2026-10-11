@@ -180,6 +180,10 @@ Moves go forward only, never touch In Review, Done or Canceled tickets, happen a
 
 App state (links, Waiting overlay, encrypted key) is in `~/Library/Application Support/session-desk/session-desk.json`.
 
+## Text size
+
+**Aa** in a session's footer opens a slider for the terminal text size, from 8 to 24pt (default 11pt). It applies to every session, and to the NerfGuard panel, and changes as you drag; **Reset** goes back to the default. The size is remembered. ⌘+ and ⌘− zoom the whole window, as in other apps.
+
 ## Dropping files into a session
 
 Drag files or images from Finder onto a session's terminal: their paths are typed into the prompt, escaped as Terminal.app does, followed by a space so you can keep typing. Claude Code attaches the images among them (they show as `[Image #1]`) and reads other files by path when you send the message. Several files at once are fine. Something dragged from a web page has no file on disk, so nothing is typed; save it first. File drops anywhere else in the window are ignored.
