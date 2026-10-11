@@ -672,6 +672,12 @@ a:hover {
   min-height: 0;
 }
 
+/* A file dragged over the terminal: dropping types its path into the prompt. */
+.term-host.drop-target {
+  outline: 2px dashed var(--accent);
+  outline-offset: -4px;
+}
+
 /* Padding goes on xterm's own element: the fit addon subtracts it there, but not on the host. */
 .term-host .xterm {
   padding: 8px 0 0 12px;

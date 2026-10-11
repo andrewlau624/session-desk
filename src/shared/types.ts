@@ -573,6 +573,8 @@ export type LinearStatus =
 export interface DeskApi {
   listSessions(): Promise<SessionSummary[]>
   defaultCwd(): Promise<string>
+  /** The file's path on disk, for a file dropped from Finder; '' when it has none (e.g. dragged from a web page). */
+  pathForFile(file: File): string
   /** Starts (or re-attaches to) a terminal; resolves with output to replay when re-attaching. */
   ptyStart(req: PtyStartRequest): Promise<string>
   ptyWrite(sessionId: string, data: string): void

@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Terminal as XTerm } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import type { Kickoff, PrBranch } from '../../../shared/types'
+import { dropText, hasFiles } from '../dropPaths'
 
 interface Props {
   sessionId: string
@@ -40,6 +41,7 @@ export function Terminal({ sessionId, resume, cwd, name, ticket, kickoff, prBran
   const term = useRef<XTerm | null>(null)
   const exitRef = useRef(onExit)
   exitRef.current = onExit
+  const [dropping, setDropping] = useState(false)
 
   useEffect(() => {
     const xterm = new XTerm({
@@ -126,5 +128,36 @@ export function Terminal({ sessionId, resume, cwd, name, ticket, kickoff, prBran
     })
   }, [visible])
 
-  return <div className="term-host" ref={host} style={{ display: visible ? 'block' : 'none' }} />
+  // Files dropped from Finder are typed into the prompt as escaped paths, as
+  // Terminal.app does; Claude Code attaches the images among them. `paste`
+  // wraps them in bracketed paste when Claude Code has it on.
+  const onDragOver = (e: React.DragEvent) => {
+    if (!hasFiles(e.dataTransfer)) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'copy'
+    setDropping(true)
+  }
+  const onDragLeave = (e: React.DragEvent) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropping(false)
+  }
+  const onDrop = (e: React.DragEvent) => {
+    if (!hasFiles(e.dataTransfer)) return
+    e.preventDefault()
+    setDropping(false)
+    const text = dropText(Array.from(e.dataTransfer.files, (f) => window.desk.pathForFile(f)))
+    if (!text || !term.current) return
+    term.current.paste(text)
+    term.current.focus()
+  }
+
+  return (
+    <div
+      className={`term-host${dropping ? ' drop-target' : ''}`}
+      ref={host}
+      style={{ display: visible ? 'block' : 'none' }}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+    />
+  )
 }

@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
+import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron'
 import type { DeskApi } from '../shared/types'
 
 function subscribe<A extends unknown[]>(channel: string, cb: (...args: A) => void): () => void {
@@ -10,6 +10,7 @@ function subscribe<A extends unknown[]>(channel: string, cb: (...args: A) => voi
 const api: DeskApi = {
   listSessions: () => ipcRenderer.invoke('sessions:list'),
   defaultCwd: () => ipcRenderer.invoke('sessions:defaultCwd'),
+  pathForFile: (file) => webUtils.getPathForFile(file),
   ptyStart: (req) => ipcRenderer.invoke('pty:start', req),
   ptyWrite: (id, data) => ipcRenderer.send('pty:write', id, data),
   ptyResize: (id, cols, rows) => ipcRenderer.send('pty:resize', id, cols, rows),

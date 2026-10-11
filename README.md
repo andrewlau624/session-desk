@@ -178,6 +178,10 @@ Moves go forward only, never touch In Review, Done or Canceled tickets, happen a
 
 App state (links, Waiting overlay, encrypted key) is in `~/Library/Application Support/session-desk/session-desk.json`.
 
+## Dropping files into a session
+
+Drag files or images from Finder onto a session's terminal: their paths are typed into the prompt, escaped as Terminal.app does, followed by a space so you can keep typing. Claude Code attaches the images among them (they show as `[Image #1]`) and reads other files by path when you send the message. Several files at once are fine. Something dragged from a web page has no file on disk, so nothing is typed; save it first. File drops anywhere else in the window are ignored.
+
 ## Model and effort
 
 Under the terminal, two buttons show the session's model and effort (from Claude's latest reply) and change them for that session only: the app saves the choice and restarts its Claude with `--model`/`--effort`, so your defaults for new sessions never change (typing `/model` or `/effort` would change them). If your default model has the 1M context (`opus[1m]`), picking another version of that family keeps it. The buttons are disabled, with the reason, while Claude is working, a question or permission prompt is open, or the session is open in another app.
