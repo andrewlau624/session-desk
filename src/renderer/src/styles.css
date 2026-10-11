@@ -91,9 +91,30 @@ a:hover {
 }
 
 .app {
+  position: relative;
   display: grid;
   grid-template-columns: 280px 1fr;
   height: 100%;
+}
+
+/* The sidebar's right edge, a little wider than the border so it's easy to
+   grab; above the toolbar's window-drag region so it can be dragged there too. */
+.sidebar-resizer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  z-index: 10;
+  cursor: col-resize;
+  -webkit-app-region: no-drag;
+  touch-action: none;
+}
+
+.sidebar-resizer:hover,
+.sidebar-resizer.dragging,
+.sidebar-resizer:focus-visible {
+  background: linear-gradient(to right, transparent 2px, var(--accent) 2px, var(--accent) 4px, transparent 4px);
+  outline: none;
 }
 
 /* Sidebar — mirrors the Claude desktop sidebar: toolbar on the traffic-light

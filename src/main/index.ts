@@ -35,8 +35,9 @@ import { deleteRemoteBranch, listRemoteLeftovers } from './remoteBranches'
 
 // One state folder for dev and the installed app (whose name differs), so
 // groups, pins and links carry over. Set before the single-instance lock,
-// which is keyed on it.
-app.setPath('userData', join(app.getPath('appData'), 'session-desk'))
+// which is keyed on it. SESSION_DESK_DATA_DIR gives a test copy its own
+// folder, and so its own lock: it runs beside the app instead of focusing it.
+app.setPath('userData', process.env.SESSION_DESK_DATA_DIR || join(app.getPath('appData'), 'session-desk'))
 
 // Two instances would each drive the same sessions; a second launch just
 // brings the first one forward.

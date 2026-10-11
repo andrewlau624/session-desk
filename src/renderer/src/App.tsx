@@ -5,6 +5,7 @@ import { LinearSettings } from './components/LinearSettings'
 import { SessionHeader } from './components/SessionHeader'
 import { SessionMenu } from './components/SessionMenu'
 import { Sidebar, type Nav } from './components/Sidebar'
+import { SidebarResizer, useSidebarWidth } from './components/SidebarResizer'
 import { Terminal } from './components/Terminal'
 import { Worktrees } from './components/Worktrees'
 import { Branches } from './components/Branches'
@@ -402,6 +403,8 @@ export function App() {
   }
 
   const markExited = (id: string) => setTerms((ts) => ts.map((t) => (t.id === id ? { ...t, exited: true } : t)))
+  const [sidebarWidth, setSidebarWidth] = useSidebarWidth()
+
   // Resume only works once a transcript exists; a session that exited before
   // anything was sent starts over under the same id.
   const restart = (id: string) => {
@@ -410,7 +413,8 @@ export function App() {
   }
 
   return (
-    <div className="app">
+    <div className="app" style={{ gridTemplateColumns: `${sidebarWidth}px 1fr` }}>
+      <SidebarResizer width={sidebarWidth} onChange={setSidebarWidth} />
       <Sidebar
         sessions={sessions}
         groups={groups}

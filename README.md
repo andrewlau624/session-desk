@@ -29,7 +29,7 @@ Builds `Session Desk.app` (Apple Silicon, ad-hoc signed; no developer certificat
 
 **Signing.** `install-app` re-signs the build with a stable identity when the keychain has one: `SESSION_DESK_SIGNING_IDENTITY` if set, else any "Developer ID Application" identity, else any "Apple Development" identity (the free certificate Xcode creates when you sign in with your Apple ID), else a self-signed "Session Desk Local Signing" certificate. A stable identity keeps the app's designated requirement the same across builds, so macOS keeps its grants: Keychain access to the saved Linear key, and access to the Documents folder. With none, the build stays ad-hoc signed and every rebuild looks like a new app: macOS re-asks for the Linear key (the app waits until you answer), and sessions whose folder is under `~/Documents` fail to start (`brew` says the working directory isn't readable, `claude` says "An unknown error occurred") until you allow Documents access again in System Settings → Privacy & Security → Files & Folders. The first signed build asks once to let `codesign` use the key.
 
-Only one copy runs at a time: launching a second (say, the installed app while `npm run dev` is up) just focuses the first. Dev and the installed app share their state folder, `~/Library/Application Support/session-desk`. The exception is the Linear key, which macOS ties to the app's identity, so each copy asks for it once.
+To try a change without quitting the installed app, give the dev copy its own state folder: `SESSION_DESK_DATA_DIR=/tmp/sd-test npm run dev`. It runs beside the app with fresh settings (it asks for a projects folder and a Linear key); don't open a session in both at once.  launching a second (say, the installed app while `npm run dev` is up) just focuses the first. Dev and the installed app share their state folder, `~/Library/Application Support/session-desk`. The exception is the Linear key, which macOS ties to the app's identity, so each copy asks for it once.
 
 ### Badge and notifications
 
@@ -209,6 +209,8 @@ When NerfGuard isn't installed, the menu offers **Install…**: after you confir
 The shield's menu runs NerfGuard's own commands for you: **Turn on** (`nerfguard enable`; **Turn on again** restarts a gateway that stopped), **Turn off** (`nerfguard disable`), **Sign in** / **Sign out**, **Dashboard** and **Live logs**. Each runs in a terminal panel you can type into, since sign-in asks for your email, a code and a password, and enable can ask questions too; nothing is answered for you. **Stop** sends Ctrl-C (and ends the command if it doesn't stop). After turning on or off, sessions already open keep their old route, so the panel offers to restart the idle ones, once NerfGuard's gateway answers (a session restarted before that couldn't connect); busy ones are left alone.
 
 ## Sidebar
+
+Drag the sidebar's right edge to make it wider or narrower (200–560px); double-click the edge for the default width, or focus it with Tab and use the arrow keys. The width is remembered. When the window is too narrow for it, the sidebar gives way so the main pane keeps some room, and goes back to your width when the window widens again.
 
 Each session row has a `…` menu on hover (or right-click): Rename, Move to group, Archive, Delete. The title-bar menu has the same items plus Stop, Open in Terminal, copy commands and Show transcript.
 
