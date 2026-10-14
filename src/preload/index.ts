@@ -75,6 +75,7 @@ const api: DeskApi = {
   resetFolder: (key) => ipcRenderer.invoke('settings:reset', key),
   onSettingsChanged: (cb) => subscribe('settings:changed', cb),
   setHideNerfguard: (hide) => ipcRenderer.invoke('settings:hideNerfguard', hide),
+  setDrawForScreenSharing: (on) => ipcRenderer.invoke('settings:drawForScreenSharing', on),
   nerfguardStatus: (force) => ipcRenderer.invoke('nerfguard:status', force),
   nerfguardRun: (action, cols, rows) => ipcRenderer.invoke('nerfguard:run', action, cols, rows),
   toolWrite: (data) => ipcRenderer.send('tool:write', data),

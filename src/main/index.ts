@@ -45,6 +45,14 @@ if (!app.requestSingleInstanceLock()) {
   app.exit(0)
 }
 
+// Chromium draws a frame when the display's refresh timer says so. Viewed
+// over Screen Sharing after the connection changes, that timer can stop for
+// the window, which then never redraws (input still works). Chromium's own
+// timer keeps it drawing, at a small idle cost, so it's a per-account setting.
+// Switches only apply before the app is ready: a change needs a restart.
+const drawForScreenSharingAtLaunch = store.prefs().drawForScreenSharing
+if (drawForScreenSharingAtLaunch) app.commandLine.appendSwitch('disable-gpu-vsync')
+
 
 // Links we hand to the OS browser. Anything else is ignored.
 const EXTERNAL_HOSTS = new Set(['github.com', 'linear.app', 'claude.ai', 'nerfguard.com'])
@@ -470,7 +478,9 @@ function settingsView(): Settings {
     claudeDirIsDefault: dir === defaultClaudeDir(),
     claudeDirSessions: describeClaudeDir(dir).sessions,
     project: projectConfigStatus(),
-    hideNerfguardWhenMissing: store.prefs().hideNerfguardWhenMissing
+    hideNerfguardWhenMissing: store.prefs().hideNerfguardWhenMissing,
+    drawForScreenSharing: store.prefs().drawForScreenSharing,
+    drawForScreenSharingActive: drawForScreenSharingAtLaunch
   }
 }
 
@@ -552,6 +562,10 @@ ipcMain.handle('settings:get', () => settingsView())
 ipcMain.handle('settings:hideNerfguard', async (_e, hide: unknown) => {
   await store.setPref('hideNerfguardWhenMissing', hide === true)
   win?.webContents.send('settings:changed')
+  return settingsView()
+})
+ipcMain.handle('settings:drawForScreenSharing', async (_e, on: unknown) => {
+  await store.setPref('drawForScreenSharing', on === true)
   return settingsView()
 })
 ipcMain.handle('nerfguard:status', (_e, force: unknown) => nerfguardStatus(force === true))

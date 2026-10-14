@@ -120,6 +120,29 @@ export function SettingsDialog({ linear, onManageLinear, onClose, notify }: Prop
             <HookSection notify={notify} />
 
             <section className="setting">
+              <div className="setting-label">Screen sharing</div>
+              <label className="check-row">
+                <input
+                  type="checkbox"
+                  checked={s.drawForScreenSharing}
+                  onChange={(e) => {
+                    const on = e.target.checked
+                    void act(() => window.desk.setDrawForScreenSharing(on))
+                  }}
+                />
+                Draw for screen sharing
+              </label>
+              <p className="setting-hint">
+                For an account you use over Screen Sharing: if Session Desk stops updating there while other apps keep working
+                (typing still reaches it), turn this on. The window then times its drawing itself instead of following the display,
+                at a small cost when idle. Only this account changes.
+              </p>
+              {s.drawForScreenSharing !== s.drawForScreenSharingActive && (
+                <p className="setting-hint warn-text">Quit and reopen Session Desk to apply this.</p>
+              )}
+            </section>
+
+            <section className="setting">
               <div className="setting-label">NerfGuard</div>
               <p className="setting-hint">
                 The shield next to Search at the top left shows whether Claude Code, and so every session here, goes through NerfGuard. It shows

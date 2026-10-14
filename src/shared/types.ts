@@ -467,6 +467,10 @@ export interface Settings {
   project: ProjectConfigStatus | null
   /** Hide the NerfGuard button while NerfGuard isn't installed (shown by default). */
   hideNerfguardWhenMissing: boolean
+  /** Saved choice: draw on Chromium's own clock, for an account used over Screen Sharing. */
+  drawForScreenSharing: boolean
+  /** What this run started with; differs from the choice until a restart. */
+  drawForScreenSharingActive: boolean
 }
 
 /** NerfGuard's own installer, as nerfguard.com gives it; it then runs setup (`nerfguard enable`) in the same terminal. */
@@ -678,6 +682,8 @@ export interface DeskApi {
   resetFolder(key: 'workspace' | 'claudeDir'): Promise<Settings>
   onSettingsChanged(cb: () => void): () => void
   setHideNerfguard(hide: boolean): Promise<Settings>
+  /** Takes effect at the next launch. */
+  setDrawForScreenSharing(on: boolean): Promise<Settings>
   /** Reused for a minute unless `force`. */
   nerfguardStatus(force?: boolean): Promise<NerfguardStatus>
   /** Runs a NerfGuard command in the panel's terminal; one at a time. */

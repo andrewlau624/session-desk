@@ -61,9 +61,11 @@ export interface Prefs {
   notifyElsewhere: boolean
   /** Hide the NerfGuard button while NerfGuard isn't installed. */
   hideNerfguardWhenMissing: boolean
+  /** Time frames with Chromium's own clock, not the display's (read at launch; see index.ts). */
+  drawForScreenSharing: boolean
 }
 
-const DEFAULT_PREFS: Prefs = { notify: true, notifyElsewhere: false, hideNerfguardWhenMissing: false }
+const DEFAULT_PREFS: Prefs = { notify: true, notifyElsewhere: false, hideNerfguardWhenMissing: false, drawForScreenSharing: false }
 
 const empty = (): Data => ({
   links: {},

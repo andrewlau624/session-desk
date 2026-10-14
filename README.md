@@ -48,6 +48,7 @@ Per user, so each account on a Mac has its own:
 - **Projects folder**: new sessions start here (so they keep its CLAUDE.md and auto-memory), and its repos, worktrees, context folder and `.session-desk.json` are read from here. The folder can hold several repos side by side, or be a single repo. Taken from `SESSION_DESK_CWD` when set; otherwise the app asks on first launch.
 - **Claude Code folder**: where sessions, transcripts and memory notes live. Defaults to `$CLAUDE_CONFIG_DIR` from your login shell, else `~/.claude`. A non-default folder is passed to every `claude` the app starts (as `CLAUDE_CONFIG_DIR`), so sessions and the app agree.
 - **Linear** connection.
+- **Draw for screen sharing**: for an account you use over Screen Sharing. Chromium normally draws a frame when the display's refresh timer says so; after the Screen Sharing connection changes, that timer can stop for Session Desk's window, which then stops updating while typing still reaches it and other apps keep working. This setting has Chromium time frames itself (`--disable-gpu-vsync`), at a small idle cost, so it's off by default and applies only to the account that turns it on, from the next launch. (`--disable-frame-rate-limit` also fixes it but redraws constantly, close to a full CPU core when idle, so it isn't used.)
 
 Each user installs their own copy (`npm run install-app` → their `~/Applications`), so one account's install never replaces another's; app state, the Keychain-held Linear key and the status files are per user too.
 
