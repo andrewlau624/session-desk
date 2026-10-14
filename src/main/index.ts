@@ -154,13 +154,37 @@ function refreshPrsLater(prs: SessionSummary['prs']): void {
 }
 
 // The renderer and the Dock badge both ask on every change; let calls that
-// land together share one scan.
+// land together share one scan. Never two at once: a scan re-reads every
+// changed transcript, and with several sessions working, overlapping scans
+// each re-read the same files (three at once measured 3 GB of a 4 GB heap).
+// A call during a scan waits for one more, which sees whatever changed since.
 let recentScan: { at: number; result: Promise<SessionSummary[]> } | null = null
+let scanning: Promise<SessionSummary[]> | null = null
+let queuedScan: Promise<SessionSummary[]> | null = null
 
 function sessions(): Promise<SessionSummary[]> {
+  if (scanning) {
+    queuedScan ??= scanning
+      .catch(() => undefined)
+      .then(() => {
+        queuedScan = null
+        return startScan()
+      })
+    return queuedScan
+  }
   if (recentScan && Date.now() - recentScan.at < 300) return recentScan.result
+  return startScan()
+}
+
+function startScan(): Promise<SessionSummary[]> {
   const result = scanSessions()
   recentScan = { at: Date.now(), result }
+  const done: Promise<SessionSummary[]> = result.finally(() => {
+    if (scanning === done) scanning = null
+  })
+  // Callers handle a failed scan; this copy only tracks that one is running.
+  done.catch(() => undefined)
+  scanning = done
   return result
 }
 

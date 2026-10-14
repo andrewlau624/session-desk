@@ -3,6 +3,7 @@ import { promises as fs } from 'node:fs'
 import { basename, dirname, join, relative, sep } from 'node:path'
 import type { TicketBranch, WorktreeInfo, WorktreeVerdict } from '../shared/types'
 import { loginPath } from './env'
+import { mapLimit } from './mapLimit'
 import { ticketsIn } from './sessions'
 
 const CONCURRENCY = 6
@@ -33,19 +34,7 @@ export async function run(cmd: string, args: string[], cwd?: string): Promise<Ru
 
 export const git = (dir: string, ...args: string[]) => run('git', ['-C', dir, ...args])
 
-export async function mapLimit<T, R>(items: T[], limit: number, fn: (t: T) => Promise<R>): Promise<R[]> {
-  const out: R[] = new Array(items.length)
-  let next = 0
-  await Promise.all(
-    Array.from({ length: Math.min(limit, items.length) }, async () => {
-      while (next < items.length) {
-        const i = next++
-        out[i] = await fn(items[i])
-      }
-    })
-  )
-  return out
-}
+export { mapLimit }
 
 interface RawWorktree {
   path: string
