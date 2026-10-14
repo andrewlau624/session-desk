@@ -545,7 +545,6 @@ export function App() {
               sessionId={t.id}
               resume={t.resume}
               cwd={t.cwd}
-              name={t.name}
               ticket={t.ticket}
               kickoff={t.kickoff}
               prBranch={t.prBranch}

@@ -9,8 +9,6 @@ interface Props {
   sessionId: string
   resume: boolean
   cwd: string
-  /** Display name for a new session. */
-  name?: string
   /** Ticket the new session is for. */
   ticket?: string
   /** Opening turn for the ticket's work (with `ticket`). */
@@ -36,7 +34,7 @@ export function themeFromCss(): Record<string, string> {
  * One live `claude` process. Mounted once and kept mounted (hidden when not
  * active) so switching sessions never restarts or interrupts a running one.
  */
-export function Terminal({ sessionId, resume, cwd, name, ticket, kickoff, prBranch, visible, fontSize, onExit }: Props) {
+export function Terminal({ sessionId, resume, cwd, ticket, kickoff, prBranch, visible, fontSize, onExit }: Props) {
   const host = useRef<HTMLDivElement>(null)
   const fit = useRef<FitAddon | null>(null)
   const term = useRef<XTerm | null>(null)
@@ -78,7 +76,7 @@ export function Terminal({ sessionId, resume, cwd, name, ticket, kickoff, prBran
     const resize = xterm.onResize(({ cols, rows }) => window.desk.ptyResize(sessionId, cols, rows))
 
     window.desk
-      .ptyStart({ sessionId, resume, cwd, name, ticket, kickoff, prBranch, cols: xterm.cols, rows: xterm.rows })
+      .ptyStart({ sessionId, resume, cwd, ticket, kickoff, prBranch, cols: xterm.cols, rows: xterm.rows })
       .then((replay) => replay && xterm.write(replay))
       .catch((err) => xterm.write(`\x1b[31mFailed to start claude: ${String(err)}\x1b[0m\r\n`))
 

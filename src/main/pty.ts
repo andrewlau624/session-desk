@@ -135,9 +135,6 @@ export class PtyManager {
     if (existing) return existing.buffer
 
     const args = req.resume ? ['--resume', req.sessionId] : ['--session-id', req.sessionId]
-    // A ticket session is named up front so it is recognisable everywhere it shows up.
-    const name = req.name && cleanName(req.name)
-    if (!req.resume && name) args.push('--name', name)
     if (brief && (!req.resume || req.kickoff)) args.push('--append-system-prompt', brief)
     // Planning runs in plan mode: Claude can read but not edit until you approve.
     // The session's own model and effort: flags apply to this process only, unlike /model.

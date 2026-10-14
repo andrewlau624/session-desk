@@ -221,8 +221,6 @@ export interface PtyStartRequest {
   cwd: string
   cols: number
   rows: number
-  /** Display name for a new session (`claude --name`). */
-  name?: string
   /** Ticket a new session was started for; the main process briefs Claude on it. */
   ticket?: string
   /** Start (or resume) the ticket's session with this opening turn; needs `ticket`. */
