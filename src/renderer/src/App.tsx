@@ -26,7 +26,6 @@ interface OpenTerm {
   id: string
   resume: boolean
   cwd: string
-  name?: string
   ticket?: string
   /** Opening turn, sent once: a restart clears it. */
   kickoff?: Kickoff
@@ -215,6 +214,7 @@ export function App() {
   /** open: switch to it (a card click); a drag into In Progress starts it in the background. */
   const startTicketSession = async (issue: LinearIssue, opts: { kickoff?: Kickoff; open?: boolean } = {}) => {
     const id = crypto.randomUUID()
+    // Shown until the session's transcript exists; Claude Code then titles it.
     const name = `${issue.identifier} ${issue.title}`
     await window.desk.linkSession(id, issue.identifier)
     setPending((p) => ({
@@ -244,7 +244,7 @@ export function App() {
         launch: null
       }
     }))
-    openTerm({ id, resume: false, cwd: defaultCwd, name, ticket: issue.identifier, kickoff: opts.kickoff })
+    openTerm({ id, resume: false, cwd: defaultCwd, ticket: issue.identifier, kickoff: opts.kickoff })
     if (opts.open !== false) setNav({ kind: 'session', id })
   }
 
