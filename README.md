@@ -130,7 +130,7 @@ Dragging a card into In Progress here (never a move made in Linear, by you, a te
 
 | The ticket's own session | What happens |
 |---|---|
-| None yet | A new session named `ENG-123 title` starts in the background, in Claude Code's plan mode, briefed on the ticket and asked to plan it from the description |
+| None yet | A new session, linked to the ticket, starts in the background in Claude Code's plan mode, briefed on the ticket and asked to plan it from the description |
 | Has talked but never planned or edited | It's resumed in plan mode and asked to plan, building on what was discussed |
 | Showed a plan that was never approved | It's resumed in plan mode and asked to present the plan again |
 | Has an approved plan, edits or a PR | It's resumed and asked to continue where it left off |
@@ -166,7 +166,7 @@ The app and the script share the same rules (`src/main/hookSettings.ts`), and th
 
 A killed process sends no `SessionEnd`, so a status only counts while a process has the session open (here, or per `~/.claude/sessions/`).
 
-Clicking a card opens its most recent linked session, or starts a new one named `ENG-123 <title>` and linked to the ticket.
+Clicking a card opens its most recent linked session, or starts a new one linked to the ticket. New sessions aren't named up front: the title comes from Claude Code (its own title, or your first prompt), and **Rename** sets one.
 
 ## Worktrees for ticket sessions
 
