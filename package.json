@@ -37,6 +37,7 @@
   },
   "productName": "Session Desk",
   "author": "Mario Bragg",
+  "license": "MIT",
   "build": {
     "appId": "app.session-desk",
     "productName": "Session Desk",
