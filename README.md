@@ -68,15 +68,15 @@ Every key is optional:
   ],
   "deploy": {
     "octo-org/backend": {
-      "prod": { "pin": { "repo": "octo-org/gitops", "path": "clusters/prod/backend/kustomization.yaml", "image": "/octo-org/backend$" } },
-      "stag": { "branch": "staging" }
+      "prod": { "pin": { "repo": "octo-org/gitops", "path": "clusters/prod/backend/kustomization.yaml", "image": "/backend$" } },
+      "stag": { "githubDeployment": "staging" }
     },
-    "acme/web": { "prod": { "githubDeployment": "Production" }, "stag": { "untracked": "manual deploy" } },
-    "acme/cli": { "prod": { "latestTag": "v*" } },
-    "acme/mono": {
+    "octo-org/frontend": { "prod": { "branch": "release" }, "stag": { "untracked": "deployed by hand" } },
+    "octo-org/sdk": { "prod": { "latestTag": "sdk-v*" } },
+    "octo-org/platform": {
       "services": {
-        "api": { "paths": ["services/api", "packages/shared/**"], "prod": { "workflowRun": { "workflow": "deploy-api.yml", "branch": "main" } } },
-        "worker": { "paths": ["services/worker/**"], "prod": { "githubDeployment": "worker-production" } }
+        "gateway": { "paths": ["gateway", "libs/common/**"], "prod": { "workflowRun": { "workflow": "release-gateway.yml", "branch": "main" } } },
+        "jobs": { "paths": ["jobs/**"], "prod": { "githubDeployment": "jobs-production" } }
       }
     }
   }
@@ -98,7 +98,7 @@ Every key is optional:
 
 `environments` are listed nearest production first, and their labels are what the PR panels say: "✓ In prod", "On staging, not in prod yet", "Not deployed yet". Board cards flag only what isn't in production.
 
-**Monorepos.** A repo whose parts deploy separately lists `services`, each with the `paths` it's built from (globs: `**` any depth, `*` and `?` within a folder; a plain path is a folder prefix) and its own environments. A merged PR counts only for the services its changed files touch, and shows each: "api: ✓ In prod · worker: Not deployed yet". A PR touching none (docs, say) shows nothing.
+**Monorepos.** A repo whose parts deploy separately lists `services`, each with the `paths` it's built from (globs: `**` any depth, `*` and `?` within a folder; a plain path is a folder prefix) and its own environments. A merged PR counts only for the services its changed files touch, and shows each: "gateway: ✓ In prod · jobs: Not deployed yet". A PR touching none (docs, say) shows nothing.
 
 ## How sessions are linked
 

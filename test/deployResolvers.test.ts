@@ -26,7 +26,7 @@ const merged = (repo: string, n = 1): PrLink => ({
   url: `https://github.com/${repo}/pull/${n}`,
   info: { title: '', state: 'MERGED', draft: false, headRef: 'b', mergeOid: OID, mergedAt: new Date().toISOString() }
 })
-const overlay = (tag: string) => Buffer.from(`images:\n  - name: ghcr.io/octo-org/acme/api\n    newTag: "${tag}"\n`).toString('base64')
+const overlay = (tag: string) => Buffer.from(`images:\n  - name: ghcr.io/octo-org/api\n    newTag: "${tag}"\n`).toString('base64')
 const useConfig = async (config: object | string) => {
   const dir = tmp()
   writeFileSync(join(dir, CONFIG_NAME), typeof config === 'string' ? config : JSON.stringify(config))
@@ -46,31 +46,31 @@ const simple = (prod: DeployState, stag: DeployState) => [
 describe('deploy tracking from .session-desk.json', () => {
   it('pinned tags in a GitOps repo, and an environment marked untracked with its reason', async () => {
     // A GitOps repo with one folder per environment and app, each pinning that app's release tag.
-    const pin = (component: string, env: string) => ({
-      pin: { repo: 'octo-org/gitops', path: `clusters/${env}/${component}/kustomization.yaml`, image: `/acme/${component}$` }
+    const pin = (app: string, env: string) => ({
+      pin: { repo: 'octo-org/gitops', path: `clusters/${env}/${app}/kustomization.yaml`, image: `/${app}$` }
     })
     await useConfig({
       deploy: {
-        'octo-org/backend': { prod: pin('server', 'prod'), stag: pin('server', 'stag') },
-        'octo-org/docs': { prod: { untracked: 'deployed by hand' }, stag: pin('site', 'stag') }
+        'octo-org/backend': { prod: pin('backend', 'prod'), stag: pin('backend', 'stag') },
+        'octo-org/docs': { prod: { untracked: 'uploaded by hand' }, stag: pin('docs', 'stag') }
       }
     })
-    const yaml = (component: string, tag: string) =>
-      Buffer.from(`images:\n  - name: ghcr.io/octo-org/acme/sidecar\n    newTag: "v0"\n  - name: ghcr.io/octo-org/acme/${component}\n    newTag: "${tag}"\n`).toString('base64')
+    const yaml = (app: string, tag: string) =>
+      Buffer.from(`images:\n  - name: ghcr.io/octo-org/backend-migrate\n    newTag: "v0"\n  - name: ghcr.io/octo-org/${app}\n    newTag: "${tag}"\n`).toString('base64')
     answers.push(
-      [/repos\/octo-org\/gitops\/contents\/clusters\/prod\/server/, yaml('server', 'v1.0.36')],
-      [/repos\/octo-org\/gitops\/contents\/clusters\/stag\/server/, yaml('server', 'v1.0.37')],
-      [/repos\/octo-org\/gitops\/contents\/clusters\/stag\/site/, yaml('site', 'v2.0.0')],
-      [/compare\/a{40}\.\.\.v1\.0\.36/, 'behind'],
-      [/compare\/a{40}\.\.\.v1\.0\.37/, 'ahead'],
+      [/repos\/octo-org\/gitops\/contents\/clusters\/prod\/backend/, yaml('backend', 'v4.2.0')],
+      [/repos\/octo-org\/gitops\/contents\/clusters\/stag\/backend/, yaml('backend', 'v4.2.1')],
+      [/repos\/octo-org\/gitops\/contents\/clusters\/stag\/docs/, yaml('docs', 'v2.0.0')],
+      [/compare\/a{40}\.\.\.v4\.2\.0/, 'behind'],
+      [/compare\/a{40}\.\.\.v4\.2\.1/, 'ahead'],
       [/compare\/a{40}\.\.\.v2\.0\.0/, 'identical']
     )
-    await refreshDeploys([merged('octo-org/backend'), merged('Octo-Org/Docs', 2), merged('acme/other', 3)])
-    expect(deployOf('https://github.com/octo-org/backend/pull/1')).toEqual(simple({ state: 'pending', tag: 'v1.0.36' }, { state: 'live', tag: 'v1.0.37' }))
+    await refreshDeploys([merged('octo-org/backend'), merged('Octo-Org/Docs', 2), merged('octo-org/other', 3)])
+    expect(deployOf('https://github.com/octo-org/backend/pull/1')).toEqual(simple({ state: 'pending', tag: 'v4.2.0' }, { state: 'live', tag: 'v4.2.1' }))
     // Repo names match case-insensitively, as on GitHub.
-    expect(deployOf('https://github.com/Octo-Org/Docs/pull/2')).toEqual(simple({ state: 'untracked', why: 'deployed by hand' }, { state: 'live', tag: 'v2.0.0' }))
+    expect(deployOf('https://github.com/Octo-Org/Docs/pull/2')).toEqual(simple({ state: 'untracked', why: 'uploaded by hand' }, { state: 'live', tag: 'v2.0.0' }))
     // A repo the config doesn't list: nothing tracked.
-    expect(deployOf('https://github.com/acme/other/pull/3')).toEqual([])
+    expect(deployOf('https://github.com/octo-org/other/pull/3')).toEqual([])
   })
 
   it('branch, latest tag and GitHub deployments, compared against a fixed commit or tag', async () => {
@@ -79,13 +79,13 @@ describe('deploy tracking from .session-desk.json', () => {
     await useConfig({
       environments: [{ id: 'production', label: 'production' }, { id: 'preview', label: 'preview' }],
       deploy: {
-        'acme/web': { production: { branch: 'production' }, preview: { githubDeployment: 'Preview' } },
-        'acme/cli': { production: { latestTag: 'v*' } }
+        'octo-org/web': { production: { branch: 'production' }, preview: { githubDeployment: 'Preview' } },
+        'octo-org/cli': { production: { latestTag: 'v*' } }
       }
     })
     answers.push(
-      [/repos\/acme\/web\/commits\/production/, SHA],
-      [/repos\/acme\/web\/deployments\?environment=Preview/, JSON.stringify([{ id: 9, sha: 'd'.repeat(40) }, { id: 8, sha: DEPLOYED }])],
+      [/repos\/octo-org\/web\/commits\/production/, SHA],
+      [/repos\/octo-org\/web\/deployments\?environment=Preview/, JSON.stringify([{ id: 9, sha: 'd'.repeat(40) }, { id: 8, sha: DEPLOYED }])],
       [/deployments\/9\/statuses/, 'failure'],
       [/deployments\/8\/statuses/, 'success'],
       [/refs\(refPrefix:"refs\/tags\/"/, JSON.stringify(['nightly-5', 'v3.1.0', 'v3.0.9'])],
@@ -93,28 +93,28 @@ describe('deploy tracking from .session-desk.json', () => {
       [new RegExp(`compare/a{40}\\.\\.\\.${DEPLOYED}`), 'behind'],
       [/compare\/a{40}\.\.\.v3\.1\.0/, 'identical']
     )
-    await refreshDeploys([merged('acme/web'), merged('acme/cli', 2)])
+    await refreshDeploys([merged('octo-org/web'), merged('octo-org/cli', 2)])
     const envs = (production: DeployState, preview: DeployState) => [
       { service: null, envs: [{ id: 'production', label: 'production', state: production }, { id: 'preview', label: 'preview', state: preview }] }
     ]
-    expect(deployOf('https://github.com/acme/web/pull/1')).toEqual(
+    expect(deployOf('https://github.com/octo-org/web/pull/1')).toEqual(
       // The newest deployment failed: the last successful one is what runs.
       envs({ state: 'live', tag: `production @ ${SHA.slice(0, 7)}` }, { state: 'pending', tag: DEPLOYED.slice(0, 7) })
     )
-    expect(deployOf('https://github.com/acme/cli/pull/2')).toEqual(envs({ state: 'live', tag: 'v3.1.0' }, { state: 'untracked' }))
+    expect(deployOf('https://github.com/octo-org/cli/pull/2')).toEqual(envs({ state: 'live', tag: 'v3.1.0' }, { state: 'untracked' }))
   })
 
   it("an environment that can't be read is unknown, not guessed", async () => {
-    await useConfig({ deploy: { 'acme/web': { prod: { branch: 'production' } } } })
+    await useConfig({ deploy: { 'octo-org/web': { prod: { branch: 'production' } } } })
     answers.push([/commits\/production/, null])
-    await refreshDeploys([merged('acme/web')])
-    expect(deployOf('https://github.com/acme/web/pull/1')?.[0].envs[0].state).toEqual({ state: 'unknown' })
+    await refreshDeploys([merged('octo-org/web')])
+    expect(deployOf('https://github.com/octo-org/web/pull/1')?.[0].envs[0].state).toEqual({ state: 'unknown' })
   })
 
   it('a monorepo: only the services a PR touched, each by its own workflow run', async () => {
     await useConfig({
       deploy: {
-        'acme/mono': {
+        'octo-org/mono': {
           services: {
             api: { paths: ['services/api', 'packages/shared/**'], prod: { workflowRun: { workflow: 'deploy-api.yml', branch: 'main' } } },
             worker: { paths: ['services/worker/**'], prod: { workflowRun: { workflow: 'deploy-worker.yml', branch: 'main' } } },
@@ -134,16 +134,16 @@ describe('deploy tracking from .session-desk.json', () => {
       [new RegExp(`compare/a{40}\\.\\.\\.${API}`), 'ahead'],
       [new RegExp(`compare/a{40}\\.\\.\\.${WORKER}`), 'behind']
     )
-    await refreshDeploys([merged('acme/mono'), merged('acme/mono', 2), merged('acme/mono', 3)])
+    await refreshDeploys([merged('octo-org/mono'), merged('octo-org/mono', 2), merged('octo-org/mono', 3)])
     const prod = (state: DeployState) => [{ id: 'prod', label: 'prod', state }, { id: 'stag', label: 'staging', state: { state: 'untracked' } }]
-    expect(deployOf('https://github.com/acme/mono/pull/1')).toEqual([
+    expect(deployOf('https://github.com/octo-org/mono/pull/1')).toEqual([
       { service: 'api', envs: prod({ state: 'live', tag: `deploy-api.yml #41 (${API.slice(0, 7)})` }) },
       { service: 'worker', envs: prod({ state: 'pending', tag: `deploy-worker.yml #9 (${WORKER.slice(0, 7)})` }) }
     ])
     // Docs only: no service touched.
-    expect(deployOf('https://github.com/acme/mono/pull/2')).toEqual([])
+    expect(deployOf('https://github.com/octo-org/mono/pull/2')).toEqual([])
     // Files unreadable: no guess; asked again next round.
-    expect(deployOf('https://github.com/acme/mono/pull/3')).toBeUndefined()
+    expect(deployOf('https://github.com/octo-org/mono/pull/3')).toBeUndefined()
   })
 
   it('pathMatch: folders, ** and *', () => {

@@ -9,16 +9,16 @@ import type { DeployState, PrLink } from '../src/shared/types'
 const OVERLAY = `resources:
   - github.com/octo-org/gitops//apps/api/base?ref=v1.0.36
 images:
-  - name: ghcr.io/octo-org/sidecar
+  - name: ghcr.io/octo-org/migrate
     newTag: "v9.9.9"
-  - name: ghcr.io/octo-org/acme/api
+  - name: ghcr.io/octo-org/api
     newTag: "v1.0.36" # promoted by release
 `
 
 describe('pinnedTag', () => {
   it("reads the component's own image tag, not another image's", () => {
-    expect(pinnedTag(OVERLAY, /\/acme\/api$/)).toBe('v1.0.36')
-    expect(pinnedTag(OVERLAY, /\/sidecar$/)).toBe('v9.9.9')
+    expect(pinnedTag(OVERLAY, /\/octo-org\/api$/)).toBe('v1.0.36')
+    expect(pinnedTag(OVERLAY, /\/migrate$/)).toBe('v9.9.9')
     expect(pinnedTag(OVERLAY, /\/bot$/)).toBeNull()
     // Comments that merely mention newTag don't count.
     expect(pinnedTag('# bump newTag: v0.0.1 on release\nimages: []\n', /x/)).toBeNull()
@@ -26,9 +26,9 @@ describe('pinnedTag', () => {
 })
 
 const merged = (prod: DeployState, stag: DeployState): PrLink => ({
-  repo: 'acme/api',
+  repo: 'octo-org/api',
   number: 1,
-  url: 'https://github.com/acme/api/pull/1',
+  url: 'https://github.com/octo-org/api/pull/1',
   deploy: [
     {
       service: null,
@@ -55,9 +55,9 @@ describe('DeployLine', () => {
     expect(text(merged(pending, live), true)).toContain('Not in prod')
   })
   it("doesn't guess where prod can't be read", () => {
-    const vercel = { state: 'untracked', why: 'deployed by hand' } as const
-    expect(text(merged(vercel, live))).toContain('On staging · prod not tracked (deployed by hand)')
-    expect(text(merged(vercel, live), true)).toBe('')
+    const byHand = { state: 'untracked', why: 'deployed by hand' } as const
+    expect(text(merged(byHand, live))).toContain('On staging · prod not tracked (deployed by hand)')
+    expect(text(merged(byHand, live), true)).toBe('')
     expect(text(merged({ state: 'untracked' }, { state: 'untracked' }))).toBe('')
     expect(text(merged({ state: 'unknown' }, live))).toBe('')
   })
