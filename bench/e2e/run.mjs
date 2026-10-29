@@ -263,7 +263,8 @@ async function main() {
     config: { indexed: INDEXED, open: OPEN, ratePerSession: RATE, windowS: WINDOW_S, idleS: IDLE_S },
     startup: [],
     idle: {},
-    streaming: {}
+    streaming: {},
+    switching: {}
   }
   for (const indexed of INDEXED) {
     // Startup: one launch on a fresh data folder, two warm ones.
@@ -306,11 +307,13 @@ async function main() {
       // Streaming: open sessions one by one (each resumes and streams); the last one is on screen.
       let opened = 0
       const baseRss = rss(b)
+      // By session id: the sidebar re-sorts as sessions get activity, so row positions move.
+      const sids = await app.cdp.eval(`[...document.querySelectorAll('.row-more[data-sid]')].map((b) => b.dataset.sid)`)
+      const clickSession = (id) => `document.querySelector('.row-more[data-sid="${id}"]').closest('.session-row').click()`
       for (const open of OPEN) {
-        const ids = await app.cdp.eval(`document.querySelectorAll('.session-row').length`)
-        if (open > ids) break
+        if (open > sids.length) break
         for (; opened < open; opened++) {
-          await app.cdp.eval(`document.querySelectorAll('.session-row')[${opened}].click()`)
+          await app.cdp.eval(clickSession(sids[opened]))
           await sleep(open > 10 ? 80 : 150)
         }
         await sleep(3000)
@@ -343,6 +346,37 @@ async function main() {
           ...frameStats(c)
         }
         console.log('streaming', indexed, open, results.streaming[`${indexed}x${open}`])
+      }
+      // Switching back: to the first session opened (longest unviewed) and to a recently viewed one.
+      if (opened > 2) {
+        const switchTo = (i) =>
+          app.cdp.eval(`new Promise((done) => {
+            const t0 = performance.now()
+            ${clickSession(sids[i])}
+            const check = () => {
+              const host = [...document.querySelectorAll('.term-host')].find((h) => h.style.display !== 'none')
+              const text = host?.querySelector('.xterm-rows')?.textContent ?? ''
+              if (text.trim().length > 0) done(performance.now() - t0)
+              else requestAnimationFrame(check)
+            }
+            requestAnimationFrame(check)
+          })`)
+        const oldest = []
+        const recent = []
+        for (let k = 0; k < 3; k++) {
+          oldest.push(await switchTo(k))
+          await sleep(500)
+          recent.push(await switchTo(opened - 2 - k))
+          await sleep(500)
+        }
+        if (process.env.BENCH_DEBUG) {
+          await switchTo(0)
+          await sleep(300)
+          const shot = await app.cdp.send('Page.captureScreenshot', { format: 'png' })
+          writeFileSync(join(ROOT, `switch-${LABEL}.png`), Buffer.from(shot.data, 'base64'))
+        }
+        results.switching[indexed] = { opened, toLongUnviewedMs: r2(pct(oldest, 50)), toRecentMs: r2(pct(recent, 50)), loadedTerminals: await app.cdp.eval(`document.querySelectorAll('.term-host').length`) }
+        console.log('switching', indexed, results.switching[indexed])
       }
       await quit(app)
     }
