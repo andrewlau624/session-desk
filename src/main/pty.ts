@@ -28,6 +28,8 @@ function cleanEnv(): Record<string, string> {
 const SCROLLBACK_CHARS = 512 * 1024
 // The footer is looked for in this much of the latest output.
 const MODE_TAIL_CHARS = 3000
+// …at most this often per session while output streams (the first chunk is read at once).
+const MODE_CHECK_MS = 100
 
 // Private modes (DECSET/DECRST) a program turns on once and relies on:
 // bracketed paste, cursor keys, mouse and focus reporting, the alternate
@@ -83,6 +85,9 @@ interface Term {
   buffer: Replay
   /** The latest MODE_TAIL_CHARS of output. */
   tail: string
+  /** Mode detection is throttled: a check is pending, and output arrived since the last one. */
+  modeTimer?: NodeJS.Timeout
+  modeDirty?: boolean
   /** The permission mode its footer shows last. */
   mode: PermissionMode | null
 }
@@ -219,15 +224,27 @@ export class PtyManager {
       term.buffer.push(data)
       this.onData(req.sessionId, data)
       term.tail = data.length >= MODE_TAIL_CHARS ? data.slice(-MODE_TAIL_CHARS) : (term.tail + data).slice(-MODE_TAIL_CHARS)
-      // Every chunk: the footer's words arrive split by cursor moves, so a
-      // cheap pre-check would miss them; a few thousand characters is cheap.
+      // The footer's words arrive split by cursor moves, so a cheap pre-check
+      // would miss them. Read the tail now, then at most every MODE_CHECK_MS
+      // while output keeps coming (with dozens of sessions streaming, reading
+      // it on every chunk was the main process's biggest cost).
+      if (term.modeTimer) term.modeDirty = true
+      else checkMode()
+    })
+    const checkMode = () => {
+      term.modeDirty = false
       const mode = detectMode(term.tail)
       if (mode && mode !== term.mode) {
         term.mode = mode
         this.onMode(req.sessionId, mode)
       }
-    })
+      term.modeTimer = setTimeout(() => {
+        term.modeTimer = undefined
+        if (term.modeDirty) checkMode()
+      }, MODE_CHECK_MS)
+    }
     proc.onExit(({ exitCode }) => {
+      clearTimeout(term.modeTimer)
       this.terms.delete(req.sessionId)
       this.ended.delete(req.sessionId)
       this.ended.set(req.sessionId, term.buffer.text())

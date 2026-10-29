@@ -84,6 +84,32 @@ The A/B runs alternated baseline (`b2cffd9`) and optimized builds on the same ma
 
 **Renderer bundle.** electron-vite doesn't minify the renderer by default; it's minified now.
 
+## Many sessions (second pass)
+
+Measured with 50 sessions streaming at once, after 35 s of settling (`--open 50 --settle 35`). This is A/B against the first pass (`b3cf8da`): `bench/results/SSA*` vs `SSB3`, `SSB4`.
+
+| Metric | First pass | Now | Change |
+|---|---|---|---|
+| Total CPU | 67.1 / 62.2% | 41.9 / 48.3% | about −30% |
+| Renderer CPU | 51.4 / 48.3% | 27.1 / 31.0% | about −41% |
+| Main-process CPU | 10.8 / 9.8% | 9.7 / 11.3% | same |
+| Terminals loaded in the window | 51 | 8 | |
+| Switch to a long-unviewed session | 3–5 ms | 21–31 ms | +~25 ms (a redraw) |
+| Switch to a recently viewed one | 3–6 ms | 3–7 ms | same |
+
+Frames stay at 120 fps (p99 9.3 ms). Memory is too noisy at this load to report: total RSS for the same build ranged from 441 to 825 MB between runs.
+
+**Unloading terminals (`App.tsx`, `Terminal.tsx`).**
+- *What stays loaded:* only the terminal on screen and the 8 most recently viewed. A new one also stays for its first 30 s, so the program's start-up exchanges with the terminal complete.
+- *What happens to the rest:* the `claude` process keeps running and main keeps its latest output. Mounting the terminal again redraws from that output. An unloaded terminal parses nothing, and that's where the renderer CPU went.
+- *Correctness:*
+  - The replay starts with the private modes (bracketed paste, cursor keys, mouse, alternate screen…) set by output that has scrolled out of it. Without that, a redrawn terminal could paste multi-line text without bracketing and submit it early.
+  - The replay holds old terminal queries, and the terminal's answers to them are dropped. Otherwise a redraw would type `^[[12;1R` into the prompt.
+  - Exits are tracked by `App`, not each terminal. An unloaded session that exits is redrawn from its last output (main keeps the last 32) and is never restarted.
+- *Known gap:* a query Claude Code sends while its terminal is unloaded gets no answer, because no terminal is there to answer it.
+
+**Mode detection throttle (`pty.ts`).** The permission-mode footer is read from the first chunk at once, then at most every 100 ms per session while output keeps coming, with a trailing check so the last state is always read. At 50 sessions this was the largest JS cost in the main process.
+
 ## Tried and rejected
 
 **WebGL terminal renderer (`@xterm/addon-webgl`).**
@@ -92,9 +118,11 @@ The A/B runs alternated baseline (`b2cffd9`) and optimized builds on the same ma
 - *Result with one visible stream:* no gain.
 - Without WebGL the DOM renderer already holds 120 fps here, so it was removed (A/B in `bench/results/opt1-e2e.json` vs `nowebgl-e2e.json`).
 
+**Holding hidden sessions' output for 250 ms** (instead of 16 ms) so their terminals parse a few large writes. Renderer CPU was unchanged at 25 sessions: xterm's cost is per byte, not per write. It was removed, along with the terminal-query fast path it needed.
+
 **No native or Metal code.** Chromium's compositor already runs on Metal. Frames are 9 ms at 120 Hz with headroom, and no profile pointed at composition.
 
 ## Where the time goes now
 
-- **Renderer CPU while many sessions stream (~35% at 25 × 50 chunks/s).** This is xterm parsing output for every open terminal, hidden ones included; hidden terminals don't paint. The next step would be holding hidden terminals' output in the renderer and writing it in larger, less frequent batches. That saves per-write overhead without dropping anything, but needs care with terminal queries Claude Code may send.
+- **Renderer CPU for the loaded terminals.** About 30% at 50 × 50 chunks/s with 8 loaded: xterm parsing and the visible one's DOM rendering.
 - **First launch with a large history.** It still scans every transcript once, on the main process's event loop, in 4-file batches. A worker thread would keep IPC responsive during that first scan.

@@ -164,7 +164,7 @@ async function launch(indexed, run, { fresh }) {
     SESSION_DESK_BENCH: '1'
   }
   const t0 = Date.now()
-  const proc = spawn(ELECTRON, [APP, `--remote-debugging-port=${PORT}`, ...THROTTLE_OFF], { env, stdio: ['ignore', 'ignore', 'pipe'] })
+  const proc = spawn(ELECTRON, [...(process.env.BENCH_MAIN_PROFILE ? ['--inspect=9339'] : []), APP, `--remote-debugging-port=${PORT}`, ...THROTTLE_OFF], { env, stdio: ['ignore', 'ignore', 'pipe'] })
   let stderr = ''
   proc.stderr.on('data', (d) => (stderr += d))
   const cdp = await Cdp.connect()
@@ -331,8 +331,27 @@ async function main() {
         }, 1000)
         await app.cdp.send('Page.bringToFront').catch(() => {})
         await app.cdp.eval(OBSERVE)
+        let mainCdp = null
+        if (process.env.BENCH_MAIN_PROFILE) {
+          const [t] = await (await fetch('http://127.0.0.1:9339/json/list')).json()
+          mainCdp = await new Cdp(t.webSocketDebuggerUrl).ready
+          await mainCdp.send('Profiler.enable')
+          await mainCdp.send('Profiler.start')
+        }
         const a2 = processes(app.proc.pid)
         await sleep(WINDOW_S * 1000)
+        if (mainCdp) {
+          const { profile } = await mainCdp.send('Profiler.stop')
+          const self = new Map()
+          const byId = new Map(profile.nodes.map((n) => [n.id, n]))
+          profile.samples.forEach((id, i) => {
+            const n = byId.get(id).callFrame
+            const k = `${n.functionName || '(anon)'} ${n.url.split('/').pop()}:${n.lineNumber}`
+            self.set(k, (self.get(k) ?? 0) + (profile.timeDeltas[i] ?? 0) / 1000)
+          })
+          console.log('main profile (self ms):', JSON.stringify([...self].sort((x, y) => y[1] - x[1]).slice(0, 15)))
+          mainCdp.close()
+        }
         const b2 = processes(app.proc.pid)
         clearInterval(appender)
         const c = await app.cdp.eval(COLLECT)
