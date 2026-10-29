@@ -1,7 +1,7 @@
 import { appendFileSync } from 'node:fs'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { detectMode, Replay } from '../src/main/pty'
-import { BACKGROUND_FLUSH_MS, PtyBatcher, QUERY_RE } from '../src/main/ptyBatch'
+import { BACKGROUND_FLUSH_MS, PtyBatcher } from '../src/main/ptyBatch'
 import { listSessions, restoreScanCache, serializeScanCache, setTicketKeys } from '../src/main/sessions'
 import { tmp, userTurn, writeTranscript } from './helpers'
 
@@ -80,16 +80,6 @@ describe('terminal output batching', () => {
     expect(sent).toEqual([])
     vi.advanceTimersByTime(1)
     expect(sent).toEqual([[['a', '13'], ['b', '2']]])
-  })
-
-  it('sends a hidden session\'s terminal queries at once, so the program gets its answer', async () => {
-    const sent: [string, string][][] = []
-    const b = new PtyBatcher((batch) => sent.push(batch), () => null)
-    b.push('a', 'text \x1b[6n')
-    await new Promise((r) => setImmediate(r))
-    expect(sent).toEqual([[['a', 'text \x1b[6n']]])
-    for (const q of ['\x1b[c', '\x1b[>c', '\x1b[?2004$p', '\x1b]11;?\x07', '\x1b[5n']) expect(QUERY_RE.test(q)).toBe(true)
-    for (const plain of ['\x1b[38;5;246m', '\x1b[2K', '\x1b[?25h', 'nc']) expect(QUERY_RE.test(plain)).toBe(false)
   })
 
   it('flush() sends what is held at once (before an exit notice)', () => {

@@ -316,7 +316,7 @@ async function main() {
           await app.cdp.eval(clickSession(sids[opened]))
           await sleep(open > 10 ? 80 : 150)
         }
-        await sleep(3000)
+        await sleep(3000 + Number(args.settle ?? 0) * 1000)
         if (process.env.BENCH_DEBUG) {
           const shot = await app.cdp.send('Page.captureScreenshot', { format: 'png' })
           writeFileSync(join(ROOT, `shot-${LABEL}-${open}.png`), Buffer.from(shot.data, 'base64'))
