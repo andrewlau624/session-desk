@@ -1,6 +1,6 @@
 {
   "label": "baseline",
-  "at": "2026-10-29T19:05:12.115Z",
+  "at": "2026-10-29T19:11:29.684Z",
   "machine": {
     "cpu": "Apple M4",
     "cores": 10,
@@ -9,75 +9,75 @@
   },
   "scan.1": {
     "sessions": 1,
-    "coldMs": 2.17,
-    "warmNoChangeMs": 0.1,
-    "warmOneGrowingMs": 0.2,
-    "coldHeapDeltaMB": 3.28,
-    "ipcPayloadKB": 0.65
+    "coldMs": 2.18,
+    "warmNoChangeMs": 0.13,
+    "warmOneGrowingMs": 0.24,
+    "coldHeapDeltaMB": 3.27,
+    "ipcPayloadKB": 0.77
   },
   "scan.10": {
     "sessions": 10,
-    "coldMs": 35.32,
-    "warmNoChangeMs": 0.28,
-    "warmOneGrowingMs": 0.27,
-    "coldHeapDeltaMB": 12.43,
-    "ipcPayloadKB": 6.5
+    "coldMs": 14.08,
+    "warmNoChangeMs": 0.29,
+    "warmOneGrowingMs": 0.29,
+    "coldHeapDeltaMB": 22.26,
+    "ipcPayloadKB": 7.6
   },
   "scan.25": {
     "sessions": 25,
-    "coldMs": 49.04,
+    "coldMs": 40.73,
     "warmNoChangeMs": 0.38,
     "warmOneGrowingMs": 0.36,
-    "coldHeapDeltaMB": 24.04,
-    "ipcPayloadKB": 16.14
+    "coldHeapDeltaMB": 24.88,
+    "ipcPayloadKB": 19.01
   },
   "scan.50": {
     "sessions": 50,
-    "coldMs": 117.33,
-    "warmNoChangeMs": 0.56,
-    "warmOneGrowingMs": 0.54,
-    "coldHeapDeltaMB": 46.48,
-    "ipcPayloadKB": 32.24
+    "coldMs": 84.79,
+    "warmNoChangeMs": 0.53,
+    "warmOneGrowingMs": 0.52,
+    "coldHeapDeltaMB": 19.5,
+    "ipcPayloadKB": 37.9
   },
   "scan.100": {
     "sessions": 100,
-    "coldMs": 417.92,
-    "warmNoChangeMs": 1.05,
-    "warmOneGrowingMs": 0.91,
-    "coldHeapDeltaMB": 67.13,
-    "ipcPayloadKB": 64.53
+    "coldMs": 174.1,
+    "warmNoChangeMs": 0.82,
+    "warmOneGrowingMs": 0.74,
+    "coldHeapDeltaMB": 33.45,
+    "ipcPayloadKB": 75.79
   },
   "scan.250": {
     "sessions": 250,
-    "coldMs": 785.82,
-    "warmNoChangeMs": 1.69,
-    "warmOneGrowingMs": 1.98,
-    "coldHeapDeltaMB": 44.29,
-    "ipcPayloadKB": 161.45
+    "coldMs": 393.19,
+    "warmNoChangeMs": 1.54,
+    "warmOneGrowingMs": 1.59,
+    "coldHeapDeltaMB": 63.39,
+    "ipcPayloadKB": 189.53
   },
   "search.25": {
-    "coldMs": 67.05,
-    "warmMedianMs": 1.26,
-    "heapMB": 76.5
+    "coldMs": 30.02,
+    "warmMedianMs": 0.86,
+    "heapMB": 79.83
   },
   "search.50": {
-    "coldMs": 161.41,
-    "warmMedianMs": 2.32,
-    "heapMB": 55.32
+    "coldMs": 62.95,
+    "warmMedianMs": 1.52,
+    "heapMB": 41.32
   },
   "search.100": {
-    "coldMs": 328.2,
-    "warmMedianMs": 5.96,
-    "heapMB": 44.23
+    "coldMs": 122.25,
+    "warmMedianMs": 2.73,
+    "heapMB": 58.93
   },
   "search.250": {
-    "coldMs": 1718.13,
-    "warmMedianMs": 13.23,
-    "heapMB": 74.23
+    "coldMs": 296.09,
+    "warmMedianMs": 6.73,
+    "heapMB": 136.1
   },
   "pty": {
-    "streamPerChunkUs": 408.97,
-    "bulkMBps": 387.36,
+    "streamPerChunkUs": 104.3,
+    "bulkMBps": 656.73,
     "delivered": 133458904
   }
 }

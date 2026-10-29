@@ -17,6 +17,8 @@ import { appendTurn, buildClaudeDir } from '../fixtures.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const REPO = join(HERE, '..', '..')
+// The app to measure: this checkout, or another built one (e.g. a worktree of the baseline commit).
+const APP = process.env.BENCH_APP ?? REPO
 const args = Object.fromEntries(
   process.argv.slice(2).reduce((acc, a, i, all) => (a.startsWith('--') ? [...acc, [a.slice(2), all[i + 1]]] : acc), [])
 )
@@ -28,6 +30,8 @@ const WINDOW_S = Number(args.window ?? 15)
 const IDLE_S = Number(args.idle ?? 20)
 const ROOT = process.env.BENCH_DIR ?? join(tmpdir(), 'session-desk-bench')
 const PORT = 9333
+// A window behind others (or on another Space) stops drawing; measure it as if on screen.
+const THROTTLE_OFF = ['--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding', '--disable-background-timer-throttling']
 const ELECTRON = createRequire(join(REPO, 'package.json'))('electron')
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -160,11 +164,12 @@ async function launch(indexed, run, { fresh }) {
     SESSION_DESK_BENCH: '1'
   }
   const t0 = Date.now()
-  const proc = spawn(ELECTRON, [REPO, `--remote-debugging-port=${PORT}`], { env, stdio: ['ignore', 'ignore', 'pipe'] })
+  const proc = spawn(ELECTRON, [APP, `--remote-debugging-port=${PORT}`, ...THROTTLE_OFF], { env, stdio: ['ignore', 'ignore', 'pipe'] })
   let stderr = ''
   proc.stderr.on('data', (d) => (stderr += d))
   const cdp = await Cdp.connect()
   await cdp.send('Runtime.enable')
+  await cdp.send('Page.bringToFront').catch(() => {})
   const firstRow = await waitFor(cdp, `document.querySelectorAll('.session-row').length > 0`, 60_000)
   await waitFor(cdp, `!!window.__deskBench?.firstRenderAt`, 60_000)
   const timing = await cdp.eval(`({
@@ -273,9 +278,27 @@ async function main() {
       // Idle: settle, then measure with nothing happening.
       await sleep(5000)
       await app.cdp.eval(OBSERVE_LOAF)
+      if (process.env.BENCH_PROFILE) await app.cdp.send('Profiler.enable').then(() => app.cdp.send('Profiler.start'))
       const a = processes(app.proc.pid)
       await sleep(IDLE_S * 1000)
       const b = processes(app.proc.pid)
+      if (process.env.BENCH_DEBUG) {
+        const shot = await app.cdp.send('Page.captureScreenshot', { format: 'png' })
+        writeFileSync(join(ROOT, `idle-${LABEL}-${indexed}.png`), Buffer.from(shot.data, 'base64'))
+      }
+      if (process.env.BENCH_PROFILE) {
+        const { profile } = await app.cdp.send('Profiler.stop')
+        writeFileSync(join(ROOT, `idle-${LABEL}-${indexed}.cpuprofile`), JSON.stringify(profile))
+        const self = new Map()
+        const dt = profile.timeDeltas
+        const byId = new Map(profile.nodes.map((n) => [n.id, n]))
+        profile.samples.forEach((id, i) => {
+          const n = byId.get(id).callFrame
+          const k = `${n.functionName || '(anon)'} ${n.url.split('/').pop()}:${n.lineNumber}`
+          self.set(k, (self.get(k) ?? 0) + (dt[i] ?? 0) / 1000)
+        })
+        console.log('idle profile (self ms):', [...self].sort((x, y) => y[1] - x[1]).slice(0, 15))
+      }
       const idle = await app.cdp.eval(`(() => { const s = window.__obs; s.po.disconnect(); return { loaf: s.loaf.length, renders: window.__deskBench.renders, heapMB: performance.memory.usedJSHeapSize / 1048576 } })()`)
       results.idle[indexed] = { cpuPercent: cpuDelta(a, b, IDLE_S), rssMB: rss(b), longAnimationFrames: idle.loaf, terminalRenders: idle.renders, rendererHeapMB: r2(idle.heapMB) }
       console.log('idle', indexed, results.idle[indexed])
@@ -303,6 +326,7 @@ async function main() {
         const appender = setInterval(() => {
           for (const p of paths.slice(0, Math.min(open, 10))) appendFileSync(p, appendTurn(p, 'x', k++))
         }, 1000)
+        await app.cdp.send('Page.bringToFront').catch(() => {})
         await app.cdp.eval(OBSERVE)
         const a2 = processes(app.proc.pid)
         await sleep(WINDOW_S * 1000)
