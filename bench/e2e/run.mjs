@@ -148,9 +148,9 @@ async function launch(indexed, run, { fresh }) {
     mkdirSync(ws, { recursive: true })
     writeFileSync(join(data, 'session-desk.json'), JSON.stringify({ paths: { claudeDir: claude, workspace: ws } }))
   }
-  rmSync(claude, { recursive: true, force: true })
+  // A relaunch keeps the same Claude folder (same files, so a saved scan is still valid).
   // APFS clones: instant, and the fixture stays pristine for the next run.
-  execFileSync('/bin/cp', ['-cR', fixture(indexed), claude])
+  if (fresh) execFileSync('/bin/cp', ['-cR', fixture(indexed), claude])
   const env = {
     PATH: process.env.PATH,
     HOME: home,
@@ -271,12 +271,12 @@ async function main() {
       const app = await launch(indexed, run, { fresh: run === 0 })
       results.startup.push({ indexed, cold: run === 0, ...app.startup })
       console.log('startup', indexed, app.startup)
-      if (run < 2) {
+      if (run < 2 || args['startup-only']) {
         await quit(app)
         continue
       }
       // Idle: settle, then measure with nothing happening.
-      await sleep(5000)
+      await sleep(12_000)
       await app.cdp.eval(OBSERVE_LOAF)
       if (process.env.BENCH_PROFILE) await app.cdp.send('Profiler.enable').then(() => app.cdp.send('Profiler.start'))
       const a = processes(app.proc.pid)

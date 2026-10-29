@@ -86,7 +86,23 @@ describe('session scan', () => {
         await listSessions({ ownPids: new Set(), includeSdk: false, claudeDir: dir })
         grow.push(performance.now() - t)
       }
+      // A relaunch: a fresh process seeded with the scan cache the last run saved (when this build has one).
+      let relaunchMs: number | null = null
+      const saver = (await import('../src/main/sessions')) as Record<string, any>
+      if (typeof saver.serializeScanCache === 'function') {
+        const saved = saver.serializeScanCache()
+        const relaunches: number[] = []
+        for (let i = 0; i < 3; i++) {
+          const fresh = (await freshSessions()) as Record<string, any>
+          const t = performance.now()
+          fresh.restoreScanCache(saved)
+          await fresh.listSessions({ ownPids: new Set(), includeSdk: false, claudeDir: dir })
+          relaunches.push(performance.now() - t)
+        }
+        relaunchMs = ms(median(relaunches))
+      }
       results[`scan.${count}`] = {
+        relaunchWithSavedCacheMs: relaunchMs,
         sessions: list.length,
         coldMs: ms(median(cold)),
         warmNoChangeMs: ms(median(warm)),
