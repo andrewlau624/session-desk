@@ -577,6 +577,8 @@ export interface DeskApi {
   defaultCwd(): Promise<string>
   /** The file's path on disk, for a file dropped from Finder; '' when it has none (e.g. dragged from a web page). */
   pathForFile(file: File): string
+  /** Benchmark instrumentation is on (SESSION_DESK_BENCH=1); see bench/. */
+  bench: boolean
   /** Starts (or re-attaches to) a terminal; resolves with output to replay when re-attaching. */
   ptyStart(req: PtyStartRequest): Promise<string>
   ptyWrite(sessionId: string, data: string): void

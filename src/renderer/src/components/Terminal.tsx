@@ -4,6 +4,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import type { Kickoff, PrBranch } from '../../../shared/types'
 import { dropText, hasFiles } from '../dropPaths'
+import { benchTerminal } from '../bench'
 
 interface Props {
   sessionId: string
@@ -58,6 +59,7 @@ export function Terminal({ sessionId, resume, cwd, ticket, kickoff, prBranch, vi
     xterm.open(host.current!)
     term.current = xterm
     fit.current = fitAddon
+    const offBench = window.desk.bench ? benchTerminal(xterm, host.current!) : () => {}
     try {
       fitAddon.fit()
     } catch {
@@ -96,6 +98,7 @@ export function Terminal({ sessionId, resume, cwd, ticket, kickoff, prBranch, vi
     ro.observe(host.current!)
 
     return () => {
+      offBench()
       ro.disconnect()
       scheme.removeEventListener('change', retheme)
       offData()

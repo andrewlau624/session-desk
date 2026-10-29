@@ -11,6 +11,7 @@ const api: DeskApi = {
   listSessions: () => ipcRenderer.invoke('sessions:list'),
   defaultCwd: () => ipcRenderer.invoke('sessions:defaultCwd'),
   pathForFile: (file) => webUtils.getPathForFile(file),
+  bench: process.env.SESSION_DESK_BENCH === '1',
   ptyStart: (req) => ipcRenderer.invoke('pty:start', req),
   ptyWrite: (id, data) => ipcRenderer.send('pty:write', id, data),
   ptyResize: (id, cols, rows) => ipcRenderer.send('pty:resize', id, cols, rows),

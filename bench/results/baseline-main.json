@@ -1,0 +1,83 @@
+{
+  "label": "baseline",
+  "at": "2026-10-29T19:05:12.115Z",
+  "machine": {
+    "cpu": "Apple M4",
+    "cores": 10,
+    "memGB": 16,
+    "node": "v22.22.3"
+  },
+  "scan.1": {
+    "sessions": 1,
+    "coldMs": 2.17,
+    "warmNoChangeMs": 0.1,
+    "warmOneGrowingMs": 0.2,
+    "coldHeapDeltaMB": 3.28,
+    "ipcPayloadKB": 0.65
+  },
+  "scan.10": {
+    "sessions": 10,
+    "coldMs": 35.32,
+    "warmNoChangeMs": 0.28,
+    "warmOneGrowingMs": 0.27,
+    "coldHeapDeltaMB": 12.43,
+    "ipcPayloadKB": 6.5
+  },
+  "scan.25": {
+    "sessions": 25,
+    "coldMs": 49.04,
+    "warmNoChangeMs": 0.38,
+    "warmOneGrowingMs": 0.36,
+    "coldHeapDeltaMB": 24.04,
+    "ipcPayloadKB": 16.14
+  },
+  "scan.50": {
+    "sessions": 50,
+    "coldMs": 117.33,
+    "warmNoChangeMs": 0.56,
+    "warmOneGrowingMs": 0.54,
+    "coldHeapDeltaMB": 46.48,
+    "ipcPayloadKB": 32.24
+  },
+  "scan.100": {
+    "sessions": 100,
+    "coldMs": 417.92,
+    "warmNoChangeMs": 1.05,
+    "warmOneGrowingMs": 0.91,
+    "coldHeapDeltaMB": 67.13,
+    "ipcPayloadKB": 64.53
+  },
+  "scan.250": {
+    "sessions": 250,
+    "coldMs": 785.82,
+    "warmNoChangeMs": 1.69,
+    "warmOneGrowingMs": 1.98,
+    "coldHeapDeltaMB": 44.29,
+    "ipcPayloadKB": 161.45
+  },
+  "search.25": {
+    "coldMs": 67.05,
+    "warmMedianMs": 1.26,
+    "heapMB": 76.5
+  },
+  "search.50": {
+    "coldMs": 161.41,
+    "warmMedianMs": 2.32,
+    "heapMB": 55.32
+  },
+  "search.100": {
+    "coldMs": 328.2,
+    "warmMedianMs": 5.96,
+    "heapMB": 44.23
+  },
+  "search.250": {
+    "coldMs": 1718.13,
+    "warmMedianMs": 13.23,
+    "heapMB": 74.23
+  },
+  "pty": {
+    "streamPerChunkUs": 408.97,
+    "bulkMBps": 387.36,
+    "delivered": 133458904
+  }
+}
