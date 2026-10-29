@@ -1,27 +1,49 @@
 import { appendFileSync } from 'node:fs'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { detectMode, Replay } from '../src/main/pty'
-import { BACKGROUND_FLUSH_MS, PtyBatcher } from '../src/main/ptyBatch'
+import { BACKGROUND_FLUSH_MS, PtyBatcher, QUERY_RE } from '../src/main/ptyBatch'
 import { listSessions, restoreScanCache, serializeScanCache, setTicketKeys } from '../src/main/sessions'
 import { tmp, userTurn, writeTranscript } from './helpers'
 
 describe('replay buffer', () => {
-  it('replays exactly what one growing string cut to the last 512 KB would', () => {
+  const LIMIT = 512 * 1024
+
+  it('keeps at least the last 512 KB, in whole chunks (never cutting a sequence in half)', () => {
     const r = new Replay()
     let whole = ''
+    const chunks: string[] = []
     for (let i = 0; i < 3000; i++) {
       const chunk = String.fromCharCode(97 + (i % 26)).repeat(1 + ((i * 37) % 900))
       r.push(chunk)
-      whole = (whole + chunk).slice(-512 * 1024)
+      chunks.push(chunk)
+      whole += chunk
     }
-    expect(r.text()).toBe(whole)
+    const text = r.text()
+    expect(whole.endsWith(text)).toBe(true)
+    expect(text.length).toBeGreaterThanOrEqual(LIMIT)
+    expect(text.length).toBeLessThan(LIMIT + 900)
+    // It starts where a chunk started.
+    let at = whole.length
+    const starts = new Set<number>()
+    for (let i = chunks.length - 1; i >= 0; i--) starts.add((at -= chunks[i].length))
+    expect(starts.has(whole.length - text.length)).toBe(true)
   })
 
-  it('keeps a single chunk bigger than the limit, cut to it', () => {
+  it('keeps a single chunk bigger than the limit whole', () => {
     const r = new Replay()
     r.push('x'.repeat(600 * 1024) + 'end')
-    expect(r.text().length).toBe(512 * 1024)
-    expect(r.text().endsWith('end')).toBe(true)
+    expect(r.text().length).toBe(600 * 1024 + 3)
+  })
+
+  it('starts with the private modes set by output it no longer holds', () => {
+    const r = new Replay()
+    // Bracketed paste and mouse reporting on at launch, mouse later off, then lots of output.
+    r.push('\x1b[?2004h\x1b[?1000;1006h')
+    r.push('\x1b[?1000l')
+    for (let i = 0; i < 700; i++) r.push('y'.repeat(1024))
+    const text = r.text()
+    expect(text.startsWith('\x1b[?2004h\x1b[?1000l\x1b[?1006h')).toBe(true)
+    expect(text.includes('\x1b[?1000;1006h')).toBe(false)
   })
 })
 
@@ -58,6 +80,16 @@ describe('terminal output batching', () => {
     expect(sent).toEqual([])
     vi.advanceTimersByTime(1)
     expect(sent).toEqual([[['a', '13'], ['b', '2']]])
+  })
+
+  it('sends a hidden session\'s terminal queries at once, so the program gets its answer', async () => {
+    const sent: [string, string][][] = []
+    const b = new PtyBatcher((batch) => sent.push(batch), () => null)
+    b.push('a', 'text \x1b[6n')
+    await new Promise((r) => setImmediate(r))
+    expect(sent).toEqual([[['a', 'text \x1b[6n']]])
+    for (const q of ['\x1b[c', '\x1b[>c', '\x1b[?2004$p', '\x1b]11;?\x07', '\x1b[5n']) expect(QUERY_RE.test(q)).toBe(true)
+    for (const plain of ['\x1b[38;5;246m', '\x1b[2K', '\x1b[?25h', 'nc']) expect(QUERY_RE.test(plain)).toBe(false)
   })
 
   it('flush() sends what is held at once (before an exit notice)', () => {
