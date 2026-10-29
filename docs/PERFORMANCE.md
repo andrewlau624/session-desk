@@ -110,6 +110,20 @@ Frames stay at 120 fps (p99 9.3 ms). Memory is too noisy at this load to report:
 
 **Mode detection throttle (`pty.ts`).** The permission-mode footer is read from the first chunk at once, then at most every 100 ms per session while output keeps coming, with a trailing check so the last state is always read. At 50 sessions this was the largest JS cost in the main process.
 
+## Long transcripts and what was left alone (third pass)
+
+**Reading transcripts in 4 MB pieces (`sessions.ts`).** The scan read everything appended since its last read in one buffer and parsed it in one synchronous pass. For one 64 MB session, that blocked the main process's event loop for 89 ms, holding up terminal output and IPC, with a 79 MB peak heap. It now reads and parses 4 MB at a time and yields in between. The worst block is now 7.4 ms and the peak heap is 38 MB, at the same total time (96 vs 102 ms, `bench/results/hugeA-main.json` vs `hugeB-main.json`). A test checks that lines crossing piece boundaries (one longer than a piece, multi-byte text) parse exactly as a whole-file read does.
+
+**Measured and left alone:**
+- **A worker thread for scanning or search.** With the pieces above, the cold scan of 250 sessions blocks the event loop for at most ~18 ms (before chunking) and search for at most ~9 ms (`block-main.json`). A worker would add a process boundary for no visible gain.
+- **Re-reading only changed files.** A re-check of 250 sessions costs 1.6 ms (it lists and stats every transcript).
+- **Startup.** A bare Electron window reaches navigation in ~175 ms on this machine; the app takes ~220–300 ms. Profiling the main process at launch:
+  - ~72 ms is `new BrowserWindow()` itself (native).
+  - The app's own JS before navigation is ~20 ms (menu, paths, watchers).
+  - The rest is the renderer: about 80 ms to DOMContentLoaded and 50 ms more to the first terminal frame.
+
+**Terminal queries while unloaded.** Claude Code 2.1.312 probes the terminal for XTVERSION and synchronized output (DECRQM 2026). Its own messages include "XTVERSION: no reply (terminal ignored query)" and "no reply to DECRQM 2026", so it has a no-reply path. These look like start-up probes, which the 30 s start-up grace covers; that wasn't confirmed against a running session.
+
 ## Tried and rejected
 
 **WebGL terminal renderer (`@xterm/addon-webgl`).**
