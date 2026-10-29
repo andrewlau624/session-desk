@@ -125,3 +125,29 @@ describe('scan cache on disk', () => {
     expect(restoreScanCache('not json')).toBe(false)
   })
 })
+
+describe('reading a transcript in pieces', () => {
+  const ID = '77777777-7777-4777-8777-777777777777'
+
+  it('gives what reading it whole does, with lines across piece boundaries and one longer than a piece', async () => {
+    setTicketKeys(['ENG'])
+    const dir = tmp()
+    const filler = (n: number) => ({
+      type: 'user',
+      message: { content: [{ type: 'tool_result', tool_use_id: 't', content: 'é€'.repeat(n) }] },
+      toolUseResult: {}
+    })
+    const path = writeTranscript(dir, ID, [
+      userTurn('fix ENG-4242 first'),
+      ...Array.from({ length: 30 }, (_, i) => filler(100_000 + i * 1_337)),
+      // About 6 MB of UTF-8 in one line: longer than a 4 MB piece.
+      filler(1_000_000),
+      { type: 'custom-title', customTitle: 'ENG-4242 after the long line' },
+      userTurn('and then this', { gitBranch: 'me/eng-4243-next' })
+    ])
+    const scanned = (await listSessions({ ownPids: new Set(), includeSdk: true, claudeDir: dir })).find((s) => s.id === ID)
+    const { parseSession } = await import('../src/main/sessions')
+    expect(scanned).toMatchObject((await parseSession(path))!)
+    expect(scanned).toMatchObject({ title: 'ENG-4242 after the long line', tickets: ['ENG-4242', 'ENG-4243'] })
+  })
+})
