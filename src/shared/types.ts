@@ -672,6 +672,8 @@ export interface DeskApi {
   pruneWorktrees(repoPath: string): Promise<void>
   /** Tells the main process which session is on screen, so it isn't notified about it. */
   setActiveSession(sessionId: string | null): void
+  /** The terminal on screen, if any: its output is delivered without batching. */
+  setVisibleTerminal(sessionId: string | null): void
   getSettings(): Promise<Settings>
   hookStatus(): Promise<HookStatus>
   /** The exact settings.json change (unified diff); empty when nothing would change. */
